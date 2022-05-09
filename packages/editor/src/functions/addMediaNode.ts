@@ -1,8 +1,10 @@
 import { getContentType } from '@xrengine/common/src/utils/getContentType'
+import { AssetLoader } from '@xrengine/engine/src/assets/classes/AssetLoader'
 import { AudioComponent } from '@xrengine/engine/src/audio/components/AudioComponent'
 import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
 import { createEntity } from '@xrengine/engine/src/ecs/functions/EntityFunctions'
 import { createEntityNode } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
+import { AssetComponent } from '@xrengine/engine/src/scene/components/AssetComponent'
 import { ImageComponent } from '@xrengine/engine/src/scene/components/ImageComponent'
 import { LinkComponent } from '@xrengine/engine/src/scene/components/LinkComponent'
 import { ModelComponent } from '@xrengine/engine/src/scene/components/ModelComponent'
@@ -31,7 +33,18 @@ export async function addMediaNode(
   let prefabType = '' as ScenePrefabTypes
   let updateFunc = null! as Function
 
-  if (contentType.startsWith('model/gltf')) {
+  if (contentType.startsWith('asset/')) {
+    prefabType = ScenePrefabs.asset
+    updateFunc = () =>
+      setPropertyOnEntityNode(
+        node,
+        {
+          component: AssetComponent,
+          properties: { path: url }
+        },
+        false
+      )
+  } else if (contentType.startsWith('model/gltf')) {
     prefabType = ScenePrefabs.model
     updateFunc = () =>
       setPropertyOnEntityNode(
@@ -98,6 +111,9 @@ export async function addMediaNode(
         false
       )
   }
+
+  AssetLoader.Cache.delete(url)
+  await AssetLoader.loadAsync(url)
 
   if (prefabType) {
     executeCommandWithHistory(EditorCommands.ADD_OBJECTS, node, {

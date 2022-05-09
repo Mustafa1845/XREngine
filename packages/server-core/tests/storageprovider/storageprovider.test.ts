@@ -2,7 +2,7 @@ import approot from 'app-root-path'
 import assert from 'assert'
 import fs from 'fs-extra'
 import fetch from 'node-fetch'
-import path from 'path'
+import path from 'path/posix'
 import { v4 as uuid } from 'uuid'
 
 import LocalStorage from '../../src/media/storageprovider/local.storage'
@@ -28,7 +28,7 @@ describe('storageprovider', () => {
     process.env.STORAGE_AWS_ACCESS_KEY_SECRET
   ) {
     const s3Provider = new S3Provider()
-    storageProviders.push(s3Provider)
+    storageProviders.push(s3Provider as any)
   }
 
   storageProviders.forEach((provider) => {
@@ -47,8 +47,7 @@ describe('storageprovider', () => {
     })
 
     it(`should have object in ${provider.constructor.name}`, async function () {
-      const fileKey = path.join(testFolderName, testFileName)
-      await assert.rejects(provider.checkObjectExistence(fileKey))
+      assert(await provider.doesExist(testFileName, testFolderName))
     })
 
     it(`should get object in ${provider.constructor.name}`, async function () {
@@ -89,31 +88,26 @@ describe('storageprovider', () => {
     // Unable to perform move/copy and rename test cases because Fleek storage doesn't implemented those methods
 
     it(`should be able to move/copy object in ${provider.constructor.name}`, async function () {
-      const fileKeyOriginal = path.join(testFolderName, testFileName)
-      const fileKeyTemp = path.join(testFolderName, 'temp', testFileName)
-      const fileKeyTemp2 = path.join(testFolderName, 'temp2', testFileName)
+      const newFolder1 = path.join(testFolderName, 'temp')
+      const newFolder2 = path.join(testFolderName, 'temp2')
 
       //check copy functionality
-      await provider.moveObject(fileKeyOriginal, folderKeyTemp, true)
-      await assert.rejects(provider.checkObjectExistence(fileKeyOriginal))
-      await assert.rejects(provider.checkObjectExistence(fileKeyTemp))
+      await provider.moveObject(testFileName, testFileName, testFolderName, newFolder1, true)
+      assert(await provider.doesExist(testFileName, testFolderName))
+      assert(await provider.doesExist(testFileName, newFolder1))
 
       //check move functionality
-      await provider.moveObject(fileKeyTemp, folderKeyTemp2)
-      await assert.rejects(provider.checkObjectExistence(fileKeyTemp2))
-      await assert.doesNotReject(provider.checkObjectExistence(fileKeyTemp))
+      await provider.moveObject(testFileName, testFileName, newFolder1, newFolder2, false)
+      assert(await provider.doesExist(testFileName, newFolder2))
+      assert(!(await provider.doesExist(testFileName, newFolder1)))
     })
 
     it(`should be able to rename object in ${provider.constructor.name}`, async function () {
       const temp2Folder = path.join(testFolderName, 'temp2')
-      const fileKeyTemp2 = path.join(temp2Folder, testFileName)
-      await provider.moveObject(fileKeyTemp2, temp2Folder, false, 'Renamed.txt')
+      await provider.moveObject(testFileName, 'Renamed.txt', testFolderName, temp2Folder, false)
       const res = await provider.listFolderContent(temp2Folder, true)
-      if (res[0].name === 'Renamed' && res.length === 1) {
-        assert.ok(true)
-        return
-      }
-      assert.ok(false)
+
+      assert.equal(res[0]?.name, 'Renamed')
     })
 
     it(`should delete object in ${provider.constructor.name}`, async function () {
