@@ -20,6 +20,6 @@
   },
   "homepage": "https://github.com/XRFoundation/XREngine#readme",
   "dependencies": {
-    "@xrengine/engine": "^0.5.4"
+    "@xrengine/engine": "0.5.4"
   }
 }
