@@ -9,8 +9,8 @@ START_TIME=$4
 PRIVATE_ECR=$5
 REGION=$6
 
-DOCKER_BUILDKIT=1 docker build -t $LABEL-$PACKAGE -f dockerfiles/$PACKAGE/Dockerfile-$PACKAGE \
-    --build-arg MYSQL_HOST=$MYSQL_HOST \
+DOCKER_BUILDKIT=1 docker build -t $LABEL-$PACKAGE . -f dockerfiles/$PACKAGE/Dockerfile-$PACKAGE \
+  --build-arg MYSQL_HOST=$MYSQL_HOST \
   --build-arg MYSQL_PORT=$MYSQL_PORT \
   --build-arg MYSQL_PASSWORD=$MYSQL_PASSWORD \
   --build-arg MYSQL_USER=$MYSQL_USER \
