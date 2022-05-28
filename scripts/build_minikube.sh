@@ -243,7 +243,9 @@ mkdir -p ./project-package-jsons/projects/default-project
 cp packages/projects/default-project/package.json ./project-package-jsons/projects/default-project
 find packages/projects/projects/ -name package.json -exec bash -c 'mkdir -p ./project-package-jsons/$(dirname $1) && cp $1 ./project-package-jsons/$(dirname $1)' - '{}' \;
 
-DOCKER_BUILDKIT=1 docker build -t root-builder -f ./dockerfiles/package-root/Dockerfile-root .
+DOCKER_BUILDKIT=1 docker build -t root-builder -f dockerfiles/package-root/Dockerfile-root .
+
+echo "====================== all good build_minikube ===================="
 
 DOCKER_BUILDKIT=1 docker build -t xrengine \
   --build-arg MYSQL_HOST=$MYSQL_HOST \
@@ -279,6 +281,8 @@ DOCKER_BUILDKIT=1 docker build -t xrengine \
   --build-arg VITE_APP_LOCAL_USER_SEED_PHRASE=$VITE_APP_LOCAL_USER_SEED_PHRASE \
   --build-arg VITE_APP_MAINNET_SONIC_CANISTER_PRINCIPAL_ID=$VITE_APP_MAINNET_SONIC_CANISTER_PRINCIPAL_ID \
   --build-arg VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID=$VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID .
+
+echo "====================== all good build_minikube 2 ===================="
 
 
 DOCKER_BUILDKIT=1 docker build -t xrengine-testbot -f ./dockerfiles/testbot/Dockerfile-testbot .

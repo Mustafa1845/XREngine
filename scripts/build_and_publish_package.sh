@@ -11,7 +11,11 @@ REGION=$6
 
 # ./
 
-DOCKER_BUILDKIT=1 docker build -t $LABEL-$PACKAGE -f ./dockerfiles/$PACKAGE/Dockerfile-$PACKAGE \
+
+echo "====================== all good build_and_publish_package ===================="
+
+
+DOCKER_BUILDKIT=1 docker build -t $LABEL-$PACKAGE -f dockerfiles/$PACKAGE/Dockerfile-$PACKAGE \
   --build-arg MYSQL_HOST=$MYSQL_HOST \
   --build-arg MYSQL_PORT=$MYSQL_PORT \
   --build-arg MYSQL_PASSWORD=$MYSQL_PASSWORD \
@@ -45,4 +49,10 @@ DOCKER_BUILDKIT=1 docker build -t $LABEL-$PACKAGE -f ./dockerfiles/$PACKAGE/Dock
   --build-arg VITE_APP_LOCAL_USER_SEED_PHRASE=$VITE_APP_LOCAL_USER_SEED_PHRASE \
   --build-arg VITE_APP_MAINNET_SONIC_CANISTER_PRINCIPAL_ID=$VITE_APP_MAINNET_SONIC_CANISTER_PRINCIPAL_ID \
   --build-arg VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID=$VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID .
+
+echo "====================== all good build_and_publish_package 2  ===================="
+
+
 bash ./scripts/publish_ecr.sh $RELEASE_NAME ${TAG}__${START_TIME} $DOCKER_LABEL $PACKAGE $PRIVATE_ECR $AWS_REGION
+
+
