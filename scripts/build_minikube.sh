@@ -243,7 +243,7 @@ mkdir -p ./project-package-jsons/projects/default-project
 cp packages/projects/default-project/package.json ./project-package-jsons/projects/default-project
 find packages/projects/projects/ -name package.json -exec bash -c 'mkdir -p ./project-package-jsons/$(dirname $1) && cp $1 ./project-package-jsons/$(dirname $1)' - '{}' \;
 
-DOCKER_BUILDKIT=1 docker build -t root-builder -f dockerfiles/package-root/Dockerfile-root .
+DOCKER_BUILDKIT=1 docker build -t root-builder -f ./dockerfiles/package-root/Dockerfile-root .
 
 DOCKER_BUILDKIT=1 docker build -t xrengine \
   --build-arg MYSQL_HOST=$MYSQL_HOST \
