@@ -15,7 +15,8 @@ REGION=$6
 echo "====================== all good build_and_publish_package ===================="
 
 
-DOCKER_BUILDKIT=1 docker build -t $LABEL-$PACKAGE -f dockerfiles/$PACKAGE/Dockerfile-$PACKAGE \
+# DOCKER_BUILDKIT=1 
+docker build -t $LABEL-$PACKAGE -f dockerfiles/$PACKAGE/Dockerfile-$PACKAGE \
   --build-arg MYSQL_HOST=$MYSQL_HOST \
   --build-arg MYSQL_PORT=$MYSQL_PORT \
   --build-arg MYSQL_PASSWORD=$MYSQL_PASSWORD \
