@@ -25,4 +25,4 @@ echo "====================== all good build_docker_builder 4 ===================
 
 
 DOCKER_BUILDKIT=1 docker build --cache-from $ECR_URL/$REPO_NAME-builder:latest_$STAGE --build-arg BUILDKIT_INLINE_CACHE=1 --tag $LABEL -f dockerfiles/builder/Dockerfile-builder .
-echo "====================== all good build_docker_builder 69 ===================="
+echo "====================== all good build_docker_builder 5 ===================="
