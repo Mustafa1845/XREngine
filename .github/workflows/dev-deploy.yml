@@ -45,7 +45,7 @@ jobs:
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET: ${{ secrets.AWS_SECRET }}
           AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          CLUSTER_NAME: ${{ secrets.DEV_CLUSTER_NAME }}
+          DEV_CLUSTER_NAME: ${{ secrets.DEV_CLUSTER_NAME }}
       - name: Space debug
         run: |
           sudo rm -rf /usr/share/dotnet
