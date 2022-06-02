@@ -11,7 +11,7 @@ import { proxifyQuaternion, proxifyVector3 } from '../../common/proxies/three'
 import { Engine } from '../../ecs/classes/Engine'
 import { Entity } from '../../ecs/classes/Entity'
 import { addComponent, getComponent, hasComponent, removeComponent } from '../../ecs/functions/ComponentFunctions'
-import { WorldNetworkAction } from '../../networking/functions/WorldNetworkAction'
+import { NetworkWorldAction } from '../../networking/functions/NetworkWorldAction'
 import { EngineRenderer } from '../../renderer/WebGLRendererSystem'
 import { TransformComponent } from '../../transform/components/TransformComponent'
 import { XRInputSourceComponent, XRInputSourceComponentType } from '../../xr/components/XRInputSourceComponent'
@@ -198,7 +198,7 @@ export const bindXRHandEvents = () => {
       initializeHandModel(world.localClientEntity, controller, xrInputSource.handedness)
 
       if (!eventSent) {
-        dispatchAction(WorldNetworkAction.xrHandsConnected({}), [Engine.instance.currentWorld.worldNetwork.hostId])
+        dispatchAction(world.store, NetworkWorldAction.xrHandsConnected({}))
         eventSent = true
       }
     })
@@ -224,8 +224,8 @@ export const startWebXR = async (): Promise<void> => {
 
   const avatarInputState = accessAvatarInputSettingsState()
   dispatchAction(
-    WorldNetworkAction.setXRMode({ enabled: true, avatarInputControllerType: avatarInputState.controlType.value }),
-    [Engine.instance.currentWorld.worldNetwork.hostId]
+    world.store,
+    NetworkWorldAction.setXRMode({ enabled: true, avatarInputControllerType: avatarInputState.controlType.value })
   )
 
   bindXRControllers()
@@ -248,9 +248,7 @@ export const endXR = (): void => {
   removeComponent(world.localClientEntity, XRInputSourceComponent)
   removeComponent(world.localClientEntity, XRHandsInputComponent)
 
-  dispatchAction(WorldNetworkAction.setXRMode({ enabled: false, avatarInputControllerType: '' }), [
-    Engine.instance.currentWorld.worldNetwork.hostId
-  ])
+  dispatchAction(world.store, NetworkWorldAction.setXRMode({ enabled: false, avatarInputControllerType: '' }))
 }
 
 /**

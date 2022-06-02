@@ -2,7 +2,7 @@ import { AnimationClip, AnimationMixer } from 'three'
 
 import { createMappedComponent } from '../../ecs/functions/ComponentFunctions'
 
-export type AnimationComponentType = {
+type AnimationComponentType = {
   mixer: AnimationMixer
   animations: AnimationClip[]
   animationSpeed: number

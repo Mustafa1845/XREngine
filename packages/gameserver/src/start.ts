@@ -8,11 +8,6 @@ import { pipe } from '@xrengine/common/src/utils/pipe'
 
 import '@xrengine/engine/src/patchEngineNode'
 
-import { Socket } from 'socket.io'
-
-import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
-import { EngineActions, getEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
-import { matchActionOnce } from '@xrengine/engine/src/networking/functions/matchActionOnce'
 import { Application } from '@xrengine/server-core/declarations'
 import config from '@xrengine/server-core/src/appconfig'
 import {
@@ -25,7 +20,7 @@ import {
 import multiLogger from '@xrengine/server-core/src/logger'
 
 import channels from './channels'
-import { setupSocketFunctions } from './SocketFunctions'
+import { SocketWebRTCServerTransport } from './SocketWebRTCServerTransport'
 
 const logger = multiLogger.child({ component: 'gameserver' })
 
@@ -39,21 +34,14 @@ process.on('unhandledRejection', (error, promise) => {
   logger.error(error, 'UNHANDLED REJECTION - Promise: %o', promise)
 })
 
-/**
- * Ensure the instance server has loaded the world before allowing any users to connect.
- * @param app
- * @param socket
- */
-const onSocket = async (app: Application, socket: Socket) => {
-  if (!getEngineState().joinedWorld.value) {
-    await new Promise((resolve) => matchActionOnce(EngineActions.joinedWorld.matches, resolve))
-  }
-  setupSocketFunctions(app.transport, socket)
+const onSocketIO = (app: Application) => {
+  app.transport = new SocketWebRTCServerTransport(app)
+  app.transport.initialize()
 }
 
 export const instanceServerPipe = pipe(
   configureOpenAPI(),
-  configureSocketIO(true, onSocket),
+  configureSocketIO(true, onSocketIO),
   configureRedis(),
   configureK8s()
 ) as (app: Application) => Application

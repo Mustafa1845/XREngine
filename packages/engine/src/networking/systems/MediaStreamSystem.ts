@@ -1,9 +1,10 @@
+import { ChannelType } from '@xrengine/common/src/interfaces/Channel'
 import { defineAction, dispatchAction } from '@xrengine/hyperflux'
 
 import { isClient } from '../../common/functions/isClient'
 import { matches } from '../../common/functions/MatchesUtils'
 import { Engine } from '../../ecs/classes/Engine'
-import { World } from '../../ecs/classes/World'
+import { Network } from '../classes/Network'
 import { localAudioConstraints, localVideoConstraints } from '../constants/VideoConstants'
 import { getNearbyUsers, NearbyUser } from '../functions/getNearbyUsers'
 
@@ -12,7 +13,8 @@ export class MediaStreams {
   static actions = {
     triggerRequestCurrentProducers: defineAction({
       store: 'ENGINE',
-      type: 'NETWORK_TRANSPORT_EVENT_REQUEST_CURRENT_PRODUCERS' as const
+      type: 'NETWORK_TRANSPORT_EVENT_REQUEST_CURRENT_PRODUCERS' as const,
+      userIds: matches.any
     }),
     triggerUpdateConsumers: defineAction({
       store: 'ENGINE',
@@ -22,6 +24,10 @@ export class MediaStreams {
       store: 'ENGINE',
       type: 'NETWORK_TRANSPORT_EVENT_CLOSE_CONSUMER' as const,
       consumer: matches.any
+    }),
+    updateNearbyLayerUsers: defineAction({
+      store: 'ENGINE',
+      type: 'NETWORK_TRANSPORT_EVENT_UPDATE_NEARBY_LAYER_USERS' as const
     })
   }
   public static instance = new MediaStreams()
@@ -310,32 +316,29 @@ globalThis.MediaStreams = MediaStreams
 
 export const updateNearbyAvatars = () => {
   MediaStreams.instance.nearbyLayerUsers = getNearbyUsers(Engine.instance.userId)
-  dispatchAction(MediaStreams.actions.triggerRequestCurrentProducers())
-
   if (!MediaStreams.instance.nearbyLayerUsers.length) return
-
   const nearbyUserIds = MediaStreams.instance.nearbyLayerUsers.map((user) => user.id)
+
+  dispatchAction(Engine.instance.store, MediaStreams.actions.updateNearbyLayerUsers())
   MediaStreams.instance.consumers.forEach((consumer) => {
     if (!nearbyUserIds.includes(consumer._appData.peerId)) {
-      dispatchAction(MediaStreams.actions.closeConsumer({ consumer }))
+      dispatchAction(Engine.instance.store, MediaStreams.actions.closeConsumer({ consumer }))
     }
   })
 }
 
 // every 5 seconds
-const NEARBY_AVATAR_UPDATE_PERIOD = 5
+const NEARBY_AVATAR_UPDATE_PERIOD = 60 * 5
 
-export default async function MediaStreamSystem(world: World) {
+export default async function MediaStreamSystem() {
   let nearbyAvatarTick = 0
   let executeInProgress = false
 
   return () => {
-    const network = Engine.instance.currentWorld.mediaNetwork
-    if (!network) return
-
-    if (network?.mediasoupOperationQueue.getBufferLength() > 0 && !executeInProgress) {
+    const networkTransport = Network.instance.getTransport('media')
+    if (networkTransport.mediasoupOperationQueue.getBufferLength() > 0 && !executeInProgress) {
       executeInProgress = true
-      const buffer = network.mediasoupOperationQueue.pop() as any
+      const buffer = networkTransport.mediasoupOperationQueue.pop() as any
       if (buffer.object && buffer.object.closed !== true && buffer.object._closed !== true) {
         try {
           if (buffer.action === 'resume') buffer.object.resume()
@@ -353,7 +356,7 @@ export default async function MediaStreamSystem(world: World) {
     }
 
     if (isClient) {
-      nearbyAvatarTick += world.deltaSeconds
+      nearbyAvatarTick++
       if (nearbyAvatarTick > NEARBY_AVATAR_UPDATE_PERIOD) {
         nearbyAvatarTick = 0
         updateNearbyAvatars()

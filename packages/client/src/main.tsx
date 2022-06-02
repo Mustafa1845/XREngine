@@ -6,9 +6,10 @@ import ReactDOM from 'react-dom'
 
 import { FullscreenContainer } from '@xrengine/client-core/src/components/FullscreenContainer'
 import { LoadingCircle } from '@xrengine/client-core/src/components/LoadingCircle'
+import { createNetworkTransports } from '@xrengine/client-core/src/transports/SocketWebRTCClientTransport'
 import { createEngine, initializeBrowser } from '@xrengine/engine/src/initializeEngine'
 
-import { initializei18n } from './util'
+import { initialize } from './util'
 
 /**
  * Performance benchmark logging
@@ -43,6 +44,7 @@ const Main = () => {
   useEffect(() => {
     createEngine()
     initializeBrowser()
+    createNetworkTransports()
   }, [])
 
   return (
@@ -55,5 +57,8 @@ const Main = () => {
   )
 }
 
-initializei18n()
-ReactDOM.render(<Main />, document.getElementById('root'))
+initialize()
+  // then load the app
+  .then((_) => {
+    ReactDOM.render(<Main />, document.getElementById('root'))
+  })

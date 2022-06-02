@@ -10,14 +10,13 @@ import { getPortalDetails } from '@xrengine/client-core/src/world/functions/getP
 import { SceneData, SceneJson } from '@xrengine/common/src/interfaces/SceneInterface'
 import multiLogger from '@xrengine/common/src/logger'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
-import { EngineActions } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { initSystems } from '@xrengine/engine/src/ecs/functions/SystemFunctions'
 import {
   initializeCoreSystems,
   initializeRealtimeSystems,
   initializeSceneSystems
 } from '@xrengine/engine/src/initializeEngine'
-import { WorldNetworkAction } from '@xrengine/engine/src/networking/functions/WorldNetworkAction'
+import { NetworkWorldAction } from '@xrengine/engine/src/networking/functions/NetworkWorldAction'
 import { updateNearbyAvatars } from '@xrengine/engine/src/networking/systems/MediaStreamSystem'
 import { EngineRenderer } from '@xrengine/engine/src/renderer/WebGLRendererSystem'
 import { loadSceneFromJSON } from '@xrengine/engine/src/scene/functions/SceneLoading'
@@ -49,13 +48,14 @@ export const initClient = async () => {
   await initializeSceneSystems()
   await loadEngineInjection(world, projects)
 
-  addActionReceptor((action) => {
+  // add extraneous receptors
+  addActionReceptor(world.store, (action) => {
     matches(action)
-      .when(WorldNetworkAction.createClient.matches, () => {
+      .when(NetworkWorldAction.createClient.matches, () => {
         updateNearbyAvatars()
         MediaStreamService.triggerUpdateNearbyLayerUsers()
       })
-      .when(WorldNetworkAction.destroyClient.matches, () => {
+      .when(NetworkWorldAction.destroyClient.matches, () => {
         updateNearbyAvatars()
         MediaStreamService.triggerUpdateNearbyLayerUsers()
       })

@@ -1,83 +1,67 @@
 import { store } from '@xrengine/client-core/src/store'
-import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
+import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
 import { removeComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { getEntityNodeArrayFromEntities } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
 import { SelectTagComponent } from '@xrengine/engine/src/scene/components/SelectTagComponent'
 
 import { executeCommand } from '../classes/History'
-import EditorCommands, { CommandFuncType, CommandParams, SelectionCommands } from '../constants/EditorCommands'
+import EditorCommands from '../constants/EditorCommands'
 import { cancelGrabOrPlacement } from '../functions/cancelGrabOrPlacement'
 import { serializeObject3DArray } from '../functions/debug'
 import { updateOutlinePassSelection } from '../functions/updateOutlinePassSelection'
 import { accessSelectionState, SelectionAction } from '../services/SelectionServices'
+import Command, { CommandParams } from './Command'
 
-export type RemoveFromSelectionCommandUndoParams = {
-  selection: Entity[]
-}
+export default class RemoveFromSelectionCommand extends Command {
+  constructor(objects: EntityTreeNode[], params: CommandParams) {
+    super(objects, params)
 
-export type RemoveFromSelectionCommandParams = CommandParams & {
-  type: SelectionCommands.REMOVE_FROM_SELECTION
-
-  undo?: RemoveFromSelectionCommandUndoParams
-}
-
-function prepare(command: RemoveFromSelectionCommandParams) {
-  if (command.keepHistory) {
-    command.undo = { selection: accessSelectionState().selectedEntities.value.slice(0) }
-  }
-}
-
-function execute(command: RemoveFromSelectionCommandParams) {
-  emitEventBefore(command)
-
-  const selectedEntities = accessSelectionState().selectedEntities.value.slice(0)
-
-  for (let i = 0; i < command.affectedNodes.length; i++) {
-    const object = command.affectedNodes[i]
-
-    const index = selectedEntities.indexOf(object.entity)
-    if (index === -1) continue
-
-    selectedEntities.splice(index, 1)
-    removeComponent(object.entity, SelectTagComponent)
+    if (this.keepHistory) this.oldSelection = accessSelectionState().selectedEntities.value.slice(0)
   }
 
-  store.dispatch(SelectionAction.updateSelection(selectedEntities))
+  execute() {
+    this.emitBeforeExecuteEvent()
 
-  emitEventAfter(command)
-}
+    this.removeFromSelection()
 
-function undo(command: RemoveFromSelectionCommandParams) {
-  if (command.undo) {
-    executeCommand({
-      type: EditorCommands.REPLACE_SELECTION,
-      affectedNodes: getEntityNodeArrayFromEntities(command.undo.selection)
-    })
+    this.emitAfterExecuteEvent()
   }
-}
 
-function emitEventBefore(command: RemoveFromSelectionCommandParams) {
-  if (command.preventEvents) return
+  undo() {
+    if (!this.oldSelection) return
+    executeCommand(EditorCommands.REPLACE_SELECTION, getEntityNodeArrayFromEntities(this.oldSelection))
+  }
 
-  cancelGrabOrPlacement()
-  store.dispatch(SelectionAction.changedBeforeSelection())
-}
+  toString() {
+    return `SelectMultipleCommand id: ${this.id} objects: ${serializeObject3DArray(this.affectedObjects)}`
+  }
 
-function emitEventAfter(command: RemoveFromSelectionCommandParams) {
-  if (command.preventEvents) return
+  emitAfterExecuteEvent() {
+    if (this.shouldEmitEvent) {
+      updateOutlinePassSelection()
+    }
+  }
 
-  updateOutlinePassSelection()
-}
+  emitBeforeExecuteEvent() {
+    if (this.shouldEmitEvent) {
+      cancelGrabOrPlacement()
+      store.dispatch(SelectionAction.changedBeforeSelection())
+    }
+  }
 
-function toString(command: RemoveFromSelectionCommandParams) {
-  return `SelectMultipleCommand id: ${command.id} objects: ${serializeObject3DArray(command.affectedNodes)}`
-}
+  removeFromSelection(): void {
+    const selectedEntities = accessSelectionState().selectedEntities.value.slice(0)
 
-export const RemoveFromSelectionCommand: CommandFuncType = {
-  prepare,
-  execute,
-  undo,
-  emitEventAfter,
-  emitEventBefore,
-  toString
+    for (let i = 0; i < this.affectedObjects.length; i++) {
+      const object = this.affectedObjects[i]
+
+      const index = selectedEntities.indexOf(object.entity)
+      if (index === -1) continue
+
+      selectedEntities.splice(index, 1)
+      removeComponent(object.entity, SelectTagComponent)
+    }
+
+    store.dispatch(SelectionAction.updateSelection(selectedEntities))
+  }
 }

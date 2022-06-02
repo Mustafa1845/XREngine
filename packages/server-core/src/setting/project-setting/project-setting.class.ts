@@ -14,7 +14,7 @@ export class ProjectSetting implements ServiceMethods<Data> {
     this.app = app
   }
 
-  async find(params?: Params): Promise<[{ key: string; value: string }]> {
+  async find(params?: Params): Promise<any> {
     const result = await this.app.service('project').find(params)
     const settingsValue = result?.data[0]?.settings ? JSON.parse(result.data[0].settings) : []
     return settingsValue

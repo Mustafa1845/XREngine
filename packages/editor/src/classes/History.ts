@@ -3,23 +3,20 @@
  * Developed as part of a project at University of Applied Sciences and Arts Northwestern Switzerland (www.fhnw.ch)
  */
 import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
+import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
 import { MappedComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { getEntityNodeArrayFromEntities } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
 
+import Command from '../commands/Command'
 import { ModifyPropertyCommandParams } from '../commands/ModifyPropertyCommand'
-import EditorCommands, {
-  CommandFuncs,
-  CommandFuncType,
-  CommandParamsOmitAffectedNodes,
-  CommandParamsType
-} from '../constants/EditorCommands'
+import EditorCommands, { CommandParamsType, Commands, EditorCommandsType } from '../constants/EditorCommands'
 import { accessSelectionState } from '../services/SelectionServices'
 
 const ALLOWED_TIME_FOR_MERGER = 1000
 
 export type EditorHistoryType = {
-  undos: CommandParamsType[]
-  redos: CommandParamsType[]
+  undos: Command[]
+  redos: Command[]
   lastCmdTime: Date
   idCounter: number
   commandUpdatesEnabled: boolean
@@ -37,46 +34,54 @@ export const EditorHistory: EditorHistoryType = {
 }
 
 /**
- * Executes command with out history.
+ * Executes command with out history passed objects.
  * @param command Command to be executed
+ * @param object a node or an array of nodes on which command will be executed
+ * @param params Params for the command
  */
-export function executeCommand(command: CommandParamsType): void {
-  if (typeof command.updateSelection === 'undefined') command.updateSelection = true
-  const commandFunctions = CommandFuncs[command.type]
-  commandFunctions.prepare(command)
-  commandFunctions.execute(command)
+export function executeCommand(
+  command: EditorCommandsType,
+  object: EntityTreeNode | EntityTreeNode[],
+  params: CommandParamsType = {}
+): void {
+  if (!params) params = {}
+  new Commands[command](Array.isArray(object) ? object : [object], params).execute()
 }
 
 /**
- * Executes command with history.
+ * Executes command with history passed objects.
  * @param command Command to be executed
+ * @param object a node or an array of nodes on which command will be executed
+ * @param params Params for the command
  */
-export function executeCommandWithHistory(command: CommandParamsType): void {
-  command.keepHistory = true
-  if (typeof command.updateSelection === 'undefined') command.updateSelection = true
-  const commandFunctions = CommandFuncs[command.type]
-  commandFunctions.prepare(command)
-
+export function executeCommandWithHistory(
+  command: EditorCommandsType,
+  object: EntityTreeNode | EntityTreeNode[],
+  params: CommandParamsType = {}
+): void {
+  params.keepHistory = true
+  let cmd = new Commands[command](Array.isArray(object) ? object : [object], params)
   const lastCmd = EditorHistory.undos[EditorHistory.undos.length - 1]
   const timeDifference = new Date().getTime() - EditorHistory.lastCmdTime.getTime()
 
   if (
     EditorHistory.commandUpdatesEnabled &&
     lastCmd &&
-    lastCmd.type === command.type &&
+    lastCmd.constructor === cmd.constructor &&
     timeDifference < ALLOWED_TIME_FOR_MERGER &&
-    commandFunctions.shouldUpdate?.(lastCmd, command)
+    lastCmd.shouldUpdate(cmd)
   ) {
-    commandFunctions.update?.(lastCmd, command)
+    lastCmd.update(cmd)
+    cmd = lastCmd
 
-    if (EditorHistory.debug) console.log(`update:`, commandFunctions.toString(lastCmd))
+    if (EditorHistory.debug) console.log(`update:`, cmd)
   } else {
     // the command is not updatable and is added as a new part of the history
-    EditorHistory.undos.push(command)
-    command.id = ++EditorHistory.idCounter
-    commandFunctions.execute(command)
+    EditorHistory.undos.push(cmd)
+    cmd.id = ++EditorHistory.idCounter
+    cmd.execute()
 
-    if (EditorHistory.debug) console.log(`execute:`, commandFunctions.toString(command))
+    if (EditorHistory.debug) console.log(`execute:`, cmd)
   }
 
   EditorHistory.lastCmdTime = new Date()
@@ -88,41 +93,42 @@ export function executeCommandWithHistory(command: CommandParamsType): void {
 /**
  * Executes command with out history on selected entities.
  * @param command Command to be executed
+ * @param params Params for the command
  */
-export function executeCommandOnSelection(command: CommandParamsOmitAffectedNodes): void {
-  ;(command as CommandParamsType).affectedNodes = getEntityNodeArrayFromEntities(
-    accessSelectionState().selectedEntities.value
-  )
-  executeCommand(command as CommandParamsType)
+export function executeCommandOnSelection(command: EditorCommandsType, params: CommandParamsType = {}): void {
+  const selection = getEntityNodeArrayFromEntities(accessSelectionState().selectedEntities.value)
+  executeCommand(command, selection, params)
 }
 
 /**
  * Executes command with history on selected entities.
  * @param command Command to be executed
+ * @param params Params for the command
  */
-export function executeCommandWithHistoryOnSelection(command: CommandParamsOmitAffectedNodes): void {
-  command.keepHistory = true
-  ;(command as CommandParamsType).affectedNodes = getEntityNodeArrayFromEntities(
-    accessSelectionState().selectedEntities.value
-  )
-  executeCommandWithHistory(command as CommandParamsType)
+export function executeCommandWithHistoryOnSelection(
+  command: EditorCommandsType,
+  params: CommandParamsType = {}
+): void {
+  params.keepHistory = true
+  const selection = getEntityNodeArrayFromEntities(accessSelectionState().selectedEntities.value)
+  executeCommandWithHistory(command, selection, params)
 }
 
 /**
- * Modifies the property for the nodes passed in command
- * @param command Nodes which properties are going to be updated
+ * Modifies the property for the provided nodes
+ * @param affectedEntityNodes Nodes which properties are going to be updated
+ * @param params Params for the command
  * @param withHistory Whether to record this command to history or not
  */
 export function executeModifyPropertyCommand<C extends MappedComponent<any, any>>(
-  command: Omit<ModifyPropertyCommandParams<C>, 'type'>,
+  affectedEntityNodes: EntityTreeNode[],
+  params: ModifyPropertyCommandParams<C>,
   withHistory = true
 ) {
-  ;(command as ModifyPropertyCommandParams<C>).type = EditorCommands.MODIFY_PROPERTY
-
   if (withHistory) {
-    executeCommandWithHistory(command as ModifyPropertyCommandParams<C>)
+    executeCommandWithHistory(EditorCommands.MODIFY_PROPERTY, affectedEntityNodes, params)
   } else {
-    executeCommand(command as ModifyPropertyCommandParams<C>)
+    executeCommand(EditorCommands.MODIFY_PROPERTY, affectedEntityNodes, params)
   }
 }
 
@@ -132,25 +138,25 @@ export function executeModifyPropertyCommand<C extends MappedComponent<any, any>
  * @param withHistory Whether to record this command to history or not
  */
 export function setPropertyOnSelectionEntities<C extends MappedComponent<any, any>>(
-  command: Omit<ModifyPropertyCommandParams<C>, 'type' | 'affectedNodes'>,
+  params: ModifyPropertyCommandParams<C>,
   withHistory = true
 ) {
-  ;(command as ModifyPropertyCommandParams<C>).affectedNodes = getEntityNodeArrayFromEntities(
-    accessSelectionState().selectedEntities.value
-  )
-  executeModifyPropertyCommand(command as ModifyPropertyCommandParams<C>, withHistory)
+  const selection = getEntityNodeArrayFromEntities(accessSelectionState().selectedEntities.value)
+  executeModifyPropertyCommand(selection, params, withHistory)
 }
 
 /**
- * Sets property on the the nodes passed in command
- * @param command Node which will be updated
+ * Sets property on the provided node
+ * @param node Node which will be updated
+ * @param params Params for command
  * @param withHistory Whether to record this command to history or not
  */
 export function setPropertyOnEntityNode<C extends MappedComponent<any, any>>(
-  command: Omit<ModifyPropertyCommandParams<C>, 'type'>,
+  node: EntityTreeNode,
+  params: ModifyPropertyCommandParams<C>,
   withHistory = true
 ) {
-  executeModifyPropertyCommand(command, withHistory)
+  executeModifyPropertyCommand([node], params, withHistory)
 }
 
 /**
@@ -158,11 +164,11 @@ export function setPropertyOnEntityNode<C extends MappedComponent<any, any>>(
  * @param checkpointId Id of the checkpoint
  */
 export function revertHistory(checkpointId: Entity): void {
-  if (EditorHistory.undos.length === 0) return
+  if (EditorHistory.undos.length === 0) {
+    return
+  }
 
   const lastCmd = EditorHistory.undos[EditorHistory.undos.length - 1]
-
-  if (typeof lastCmd.id === 'undefined') return
 
   if (lastCmd && checkpointId > lastCmd.id) {
     console.warn('Tried to revert back to an undo action with an id greater than the last action')
@@ -170,14 +176,11 @@ export function revertHistory(checkpointId: Entity): void {
   }
 
   let cmd = EditorHistory.undos.pop()!
-  let commandFunctions: CommandFuncType
-
   while (EditorHistory.undos.length > 0 && checkpointId !== cmd.id) {
-    commandFunctions = CommandFuncs[cmd.type]
-    commandFunctions.undo(cmd)
+    cmd.undo()
     EditorHistory.redos.push(cmd)
 
-    if (EditorHistory.debug) console.log(`revert: ${commandFunctions.toString(cmd)}`)
+    if (EditorHistory.debug) console.log(`revert: ${cmd}`)
     cmd = EditorHistory.undos.pop()!
   }
 }
@@ -186,14 +189,14 @@ export function revertHistory(checkpointId: Entity): void {
  * Undos the effect of latest executed command
  * @returns Command which was undone
  */
-export function undoCommand(): CommandParamsType | undefined {
+export function undoCommand(): Command | undefined {
   if (EditorHistory.undos.length === 0) return
 
   const cmd = EditorHistory.undos.pop()!
-  CommandFuncs[cmd.type].undo(cmd)
+  cmd.undo()
   EditorHistory.redos.push(cmd)
 
-  if (EditorHistory.debug) console.log(`undo: ${CommandFuncs[cmd.type].toString(cmd)}`)
+  if (EditorHistory.debug) console.log(`undo: ${cmd}`)
 
   return cmd
 }
@@ -202,14 +205,14 @@ export function undoCommand(): CommandParamsType | undefined {
  * undos the effect of undo command
  * @returns command which was undone
  */
-export function redoCommand(): CommandParamsType | undefined {
+export function redoCommand(): Command | undefined {
   if (EditorHistory.redos.length === 0) return
 
   const cmd = EditorHistory.redos.pop()!
-  CommandFuncs[cmd.type].undo(cmd)
+  cmd.undo()
   EditorHistory.undos.push(cmd)
 
-  if (EditorHistory.debug) console.log(`redo: ${CommandFuncs[cmd.type].toString(cmd)}`)
+  if (EditorHistory.debug) console.log(`redo: ${cmd}`)
 
   return cmd
 }
@@ -218,11 +221,7 @@ export function redoCommand(): CommandParamsType | undefined {
  * @returns Debug lof for all the commands
  */
 export function getDebugLogForHistory(): string {
-  return EditorHistory.undos
-    .map((cmd) => {
-      CommandFuncs[cmd.type].toString(cmd)
-    })
-    .join('\n')
+  return EditorHistory.undos.map((cmd) => cmd.toString()).join('\n')
 }
 
 /**

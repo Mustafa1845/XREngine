@@ -12,8 +12,8 @@ import { handleCommand, isCommand } from '@xrengine/engine/src/common/functions/
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { isPlayerLocal } from '@xrengine/engine/src/networking/utils/isPlayerLocal'
 
+import { AlertService } from '../../common/services/AlertService'
 import { accessLocationInstanceConnectionState } from '../../common/services/LocationInstanceConnectionService'
-import { NotificationService } from '../../common/services/NotificationService'
 import { client } from '../../feathers'
 import { store, useDispatch } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
@@ -237,7 +237,7 @@ export const ChatService = {
       })) as Paginated<Channel>
       dispatch(ChatAction.loadedChannels(channelResult))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   getInstanceChannel: async () => {
@@ -246,13 +246,13 @@ export const ChatService = {
       const channelResult = (await client.service('channel').find({
         query: {
           channelType: 'instance',
-          instanceId: Engine.instance.currentWorld.worldNetwork.hostId
+          instanceId: accessLocationInstanceConnectionState().currentInstanceId.value
         }
-      })) as Channel[]
-      if (!channelResult.length) return setTimeout(() => ChatService.getInstanceChannel(), 2000)
-      dispatch(ChatAction.loadedChannel(channelResult[0], 'instance'))
+      })) as Paginated<Channel>
+      if (channelResult.total === 0) return setTimeout(() => ChatService.getInstanceChannel(), 2000)
+      dispatch(ChatAction.loadedChannel(channelResult.data[0], 'instance'))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   createMessage: async (values: ChatMessageProps) => {
@@ -269,7 +269,7 @@ export const ChatService = {
       }
       await client.service('message').create(data)
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   sendChatMessage: (values: ChatMessageProps) => {
@@ -310,7 +310,7 @@ export const ChatService = {
         })) as Paginated<Message>
         dispatch(ChatAction.loadedMessages(channelId, messageResult))
       } catch (err) {
-        NotificationService.dispatchNotify(err.message, { variant: 'error' })
+        AlertService.dispatchAlertError(err)
       }
     }
   },
@@ -318,7 +318,7 @@ export const ChatService = {
     try {
       await client.service('message').remove(messageId)
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   patchMessage: async (messageId: string, text: string) => {
@@ -327,7 +327,7 @@ export const ChatService = {
         text: text
       })
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   updateChatTarget: async (targetObjectType: string, targetObject: any) => {

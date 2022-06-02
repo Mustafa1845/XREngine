@@ -1,7 +1,7 @@
 import { useDispatch } from '@xrengine/client-core/src/store'
-import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { hasComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { traverseEntityNode } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
+import { useWorld } from '@xrengine/engine/src/ecs/functions/SystemHooks'
 import {
   SnapMode,
   TransformMode,
@@ -12,7 +12,8 @@ import {
 } from '@xrengine/engine/src/scene/constants/transformConstants'
 import { DisableTransformTagComponent } from '@xrengine/engine/src/transform/components/DisableTransformTagComponent'
 
-import { EditorHistory } from '../classes/History'
+import { EditorHistory, executeCommand, executeCommandWithHistoryOnSelection, revertHistory } from '../classes/History'
+import EditorCommands from '../constants/EditorCommands'
 import { accessEditorHelperState, EditorHelperAction } from '../services/EditorHelperState'
 import { accessSelectionState } from '../services/SelectionServices'
 import { SceneState } from './sceneRenderFunctions'
@@ -21,7 +22,7 @@ export const setTransformMode = (mode: TransformModeType): void => {
   if (mode === TransformMode.Placement || mode === TransformMode.Grab) {
     let stop = false
     const selectedEntities = accessSelectionState().selectedEntities.value
-    const tree = Engine.instance.currentWorld.entityTree
+    const tree = useWorld().entityTree
 
     // Dont allow grabbing / placing objects with transform disabled.
     for (const entity of selectedEntities) {
@@ -77,4 +78,20 @@ export const toggleTransformSpace = () => {
         : TransformSpace.World
     )
   )
+}
+
+export const cancelGrabOrPlacement = () => {
+  const editorHelperState = accessEditorHelperState()
+
+  if (editorHelperState.transformMode.value === TransformMode.Grab) {
+    setTransformMode(editorHelperState.transformModeOnCancel.value)
+    if (EditorHistory.grabCheckPoint) revertHistory(EditorHistory.grabCheckPoint)
+  } else if (editorHelperState.transformMode.value === TransformMode.Placement) {
+    setTransformMode(editorHelperState.transformModeOnCancel.value)
+    executeCommandWithHistoryOnSelection(EditorCommands.REMOVE_OBJECTS, {
+      deselectObject: true
+    })
+  }
+
+  executeCommand(EditorCommands.REPLACE_SELECTION, [])
 }

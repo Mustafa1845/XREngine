@@ -300,9 +300,8 @@ export default async function EditorControlSystem(_: World) {
             )
           }
 
-          executeCommandWithHistoryOnSelection({
-            type: EditorCommands.POSITION,
-            positions: [translationVector],
+          executeCommandWithHistoryOnSelection(EditorCommands.POSITION, {
+            positions: translationVector,
             space: transformSpace,
             addToPosition: true
           })
@@ -329,8 +328,7 @@ export default async function EditorControlSystem(_: World) {
           const relativeRotationAngle = rotationAngle - prevRotationAngle
           prevRotationAngle = rotationAngle
 
-          executeCommandWithHistoryOnSelection({
-            type: EditorCommands.ROTATE_AROUND,
+          executeCommandWithHistoryOnSelection(EditorCommands.ROTATE_AROUND, {
             pivot: gizmoObj.position,
             axis: planeNormal,
             angle: relativeRotationAngle
@@ -410,9 +408,8 @@ export default async function EditorControlSystem(_: World) {
           scaleVector.copy(curScale).divide(prevScale)
           prevScale.copy(curScale)
 
-          executeCommandWithHistoryOnSelection({
-            type: EditorCommands.SCALE,
-            scales: [scaleVector],
+          executeCommandWithHistoryOnSelection(EditorCommands.SCALE, {
+            scales: scaleVector,
             space: transformSpace
           })
         }
@@ -428,7 +425,9 @@ export default async function EditorControlSystem(_: World) {
           setTransformMode(shift || boost ? TransformMode.Placement : editorHelperState.transformModeOnCancel.value)
         } else if (transformMode === TransformMode.Placement) {
           if (shift || boost) {
-            executeCommandWithHistoryOnSelection({ type: EditorCommands.DUPLICATE_OBJECTS })
+            executeCommandWithHistoryOnSelection(EditorCommands.DUPLICATE_OBJECTS, {
+              isObjectSelected: false
+            })
           } else {
             setTransformMode(editorHelperState.transformModeOnCancel.value)
           }
@@ -438,13 +437,13 @@ export default async function EditorControlSystem(_: World) {
             const result = getIntersectingNodeOnScreen(raycaster, selectEndPosition)
             if (result) {
               if (result.node) {
-                executeCommandWithHistory({
-                  type: shift ? EditorCommands.TOGGLE_SELECTION : EditorCommands.REPLACE_SELECTION,
-                  affectedNodes: [result.node]
-                })
+                executeCommandWithHistory(
+                  shift ? EditorCommands.TOGGLE_SELECTION : EditorCommands.REPLACE_SELECTION,
+                  result.node
+                )
               }
             } else if (!shift) {
-              executeCommandWithHistory({ type: EditorCommands.REPLACE_SELECTION, affectedNodes: [] })
+              executeCommandWithHistory(EditorCommands.REPLACE_SELECTION, [])
             }
           }
           SceneState.transformGizmo.deselectAxis()
@@ -452,15 +451,13 @@ export default async function EditorControlSystem(_: World) {
         }
       }
       if (getInput(EditorActionSet.rotateLeft)) {
-        executeCommandWithHistoryOnSelection({
-          type: EditorCommands.ROTATE_AROUND,
+        executeCommandWithHistoryOnSelection(EditorCommands.ROTATE_AROUND, {
           pivot: SceneState.transformGizmo.position,
           axis: new Vector3(0, 1, 0),
           angle: editorHelperState.rotationSnap.value * MathUtils.DEG2RAD
         })
       } else if (getInput(EditorActionSet.rotateRight)) {
-        executeCommandWithHistoryOnSelection({
-          type: EditorCommands.ROTATE_AROUND,
+        executeCommandWithHistoryOnSelection(EditorCommands.ROTATE_AROUND, {
           pivot: SceneState.transformGizmo.position,
           axis: new Vector3(0, 1, 0),
           angle: -editorHelperState.rotationSnap.value * MathUtils.DEG2RAD
@@ -468,14 +465,14 @@ export default async function EditorControlSystem(_: World) {
       } else if (getInput(EditorActionSet.grab)) {
         if (transformMode === TransformMode.Grab || transformMode === TransformMode.Placement) {
           cancelGrabOrPlacement()
-          executeCommand({ type: EditorCommands.REPLACE_SELECTION, affectedNodes: [] })
+          executeCommand(EditorCommands.REPLACE_SELECTION, [])
         }
         if (selectedEntities.length > 0) {
           setTransformMode(TransformMode.Grab)
         }
       } else if (getInput(EditorActionSet.cancel)) {
         cancelGrabOrPlacement()
-        executeCommand({ type: EditorCommands.REPLACE_SELECTION, affectedNodes: [] })
+        executeCommand(EditorCommands.REPLACE_SELECTION, [])
       } else if (getInput(EditorActionSet.focusSelection)) {
         cameraComponent.focusedObjects = getEntityNodeArrayFromEntities(selectedEntities)
         cameraComponent.refocus = true
@@ -500,7 +497,9 @@ export default async function EditorControlSystem(_: World) {
       } else if (getInput(EditorActionSet.redo)) {
         redoCommand()
       } else if (getInput(EditorActionSet.deleteSelected)) {
-        executeCommandWithHistoryOnSelection({ type: EditorCommands.REMOVE_OBJECTS })
+        executeCommandWithHistoryOnSelection(EditorCommands.REMOVE_OBJECTS, {
+          deselectObject: true
+        })
       }
 
       if (editorHelperState.isFlyModeEnabled.value) continue

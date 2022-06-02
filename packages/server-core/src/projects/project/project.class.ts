@@ -37,6 +37,9 @@ const getRemoteURLFromGitData = (project) => {
   return data.remote.origin.url
 }
 
+export const getStorageProviderPath = (projectName: string) =>
+  `https://${getStorageProvider().cacheDomain}/projects/${projectName}/`
+
 export const deleteProjectFilesInStorageProvider = async (projectName: string) => {
   const storageProvider = getStorageProvider()
   try {
@@ -126,6 +129,7 @@ export class Project extends Service {
     await super.create({
       thumbnail: projectConfig.thumbnail,
       name: projectName,
+      storageProviderPath: getStorageProviderPath(projectName),
       repositoryPath: getRemoteURLFromGitData(projectName)
     })
     // run project install script
@@ -210,6 +214,7 @@ export class Project extends Service {
       {
         thumbnail: packageData.thumbnail,
         name: projectName,
+        storageProviderPath: getStorageProviderPath(projectName),
         repositoryPath: null
       },
       params
@@ -267,6 +272,7 @@ export class Project extends Service {
       {
         thumbnail: projectConfig.thumbnail,
         name: projectName,
+        storageProviderPath: getStorageProviderPath(projectName),
         repositoryPath: data.url
       },
       params || {}
@@ -327,7 +333,7 @@ export class Project extends Service {
       query: {
         ...params?.query,
         $limit: params?.query?.$limit || 1000,
-        $select: params?.query?.$select || ['id', 'name', 'thumbnail', 'repositoryPath']
+        $select: params?.query?.$select || ['id', 'name', 'thumbnail', 'repositoryPath', 'storageProviderPath']
       }
     }
 

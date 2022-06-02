@@ -15,7 +15,9 @@ import { EngineActions, EngineEventReceptor, EngineState } from './ecs/classes/E
 import { createWorld } from './ecs/classes/World'
 import { initSystems, SystemModuleType } from './ecs/functions/SystemFunctions'
 import { SystemUpdateType } from './ecs/functions/SystemUpdateType'
+import { Network } from './networking/classes/Network'
 import { matchActionOnce } from './networking/functions/matchActionOnce'
+import { NetworkActionReceptor } from './networking/functions/NetworkActionReceptor'
 import { EngineRenderer } from './renderer/WebGLRendererSystem'
 import { ObjectLayers } from './scene/constants/ObjectLayers'
 import { FontManager } from './xrui/classes/FontManager'
@@ -27,10 +29,12 @@ import { FontManager } from './xrui/classes/FontManager'
  */
 export const createEngine = () => {
   Engine.instance = new Engine()
+  Network.instance = new Network()
   Engine.instance.currentWorld = createWorld()
   EngineRenderer.instance = new EngineRenderer()
-  registerState(EngineState)
-  addActionReceptor(EngineEventReceptor)
+  if (isClient) EngineRenderer.instance.initialize()
+  registerState(Engine.instance.store, EngineState)
+  addActionReceptor(Engine.instance.store, EngineEventReceptor)
 }
 
 /**
@@ -39,7 +43,6 @@ export const createEngine = () => {
  * initializes everything for the browser context
  */
 export const initializeBrowser = () => {
-  EngineRenderer.instance.initialize()
   Engine.instance.publicPath = location.origin
   const world = Engine.instance.currentWorld
   world.audioListener = new AudioListener()
@@ -70,14 +73,14 @@ export const initializeBrowser = () => {
   // maybe needs to be awaited?
   FontManager.instance.getDefaultFont()
 
-  matchActionOnce(EngineActions.connect.matches, (action: any) => {
+  matchActionOnce(Engine.instance.store, EngineActions.connect.matches, (action: any) => {
     Engine.instance.userId = action.id
   })
 }
 
 const setupInitialClickListener = () => {
   const initialClickListener = () => {
-    dispatchAction(EngineActions.setUserHasInteracted())
+    dispatchAction(Engine.instance.store, EngineActions.setUserHasInteracted())
     window.removeEventListener('click', initialClickListener)
     window.removeEventListener('touchend', initialClickListener)
   }
@@ -96,6 +99,7 @@ export const initializeNode = () => {
 
 const executeWorlds = (elapsedTime) => {
   Engine.instance.frameTime = elapsedTime
+  ActionFunctions.applyIncomingActions(Engine.instance.store)
   for (const world of Engine.instance.worlds) {
     world.execute(elapsedTime)
   }
@@ -123,10 +127,12 @@ export const initializeMediaServerSystems = async () => {
 
   await initSystems(world, coreSystems)
 
-  Engine.instance.engineTimer = Timer(executeWorlds, Engine.instance.tickRate)
+  NetworkActionReceptor.createNetworkActionReceptor(world)
+
+  Engine.instance.engineTimer = Timer(executeWorlds)
   Engine.instance.engineTimer.start()
 
-  dispatchAction(EngineActions.initializeEngine({ initialised: true }))
+  dispatchAction(Engine.instance.store, EngineActions.initializeEngine({ initialised: true }))
 }
 
 export const initializeCoreSystems = async () => {
@@ -177,10 +183,6 @@ export const initializeCoreSystems = async () => {
       {
         type: SystemUpdateType.UPDATE,
         systemModulePromise: import('./xrui/systems/XRUISystem')
-      },
-      {
-        type: SystemUpdateType.FIXED_LATE,
-        systemModulePromise: import('./scene/systems/MaterialOverrideSystem')
       }
     )
   }
@@ -191,10 +193,10 @@ export const initializeCoreSystems = async () => {
   // load injected systems which may rely on core systems
   await initSystems(world, Engine.instance.injectedSystems)
 
-  Engine.instance.engineTimer = Timer(executeWorlds, Engine.instance.tickRate)
+  Engine.instance.engineTimer = Timer(executeWorlds)
   Engine.instance.engineTimer.start()
 
-  dispatchAction(EngineActions.initializeEngine({ initialised: true }))
+  dispatchAction(Engine.instance.store, EngineActions.initializeEngine({ initialised: true }))
 }
 
 /**
@@ -203,6 +205,7 @@ export const initializeCoreSystems = async () => {
 
 export const initializeSceneSystems = async () => {
   const world = Engine.instance.currentWorld
+  NetworkActionReceptor.createNetworkActionReceptor(world)
 
   const systemsToLoad: SystemModuleType<any>[] = []
 
@@ -310,14 +313,9 @@ export const initializeSceneSystems = async () => {
 export const initializeRealtimeSystems = async (media = true, pose = true) => {
   const systemsToLoad: SystemModuleType<any>[] = []
 
-  systemsToLoad.push({
-    type: SystemUpdateType.FIXED_EARLY,
-    systemModulePromise: import('./networking/systems/WorldNetworkActionSystem')
-  })
-
   if (media) {
     systemsToLoad.push({
-      type: SystemUpdateType.UPDATE,
+      type: SystemUpdateType.PRE_RENDER,
       systemModulePromise: import('./networking/systems/MediaStreamSystem')
     })
   }

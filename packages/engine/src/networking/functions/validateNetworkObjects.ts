@@ -2,7 +2,7 @@ import { dispatchAction } from '@xrengine/hyperflux'
 
 import { Engine } from '../../ecs/classes/Engine'
 import { World } from '../../ecs/classes/World'
-import { WorldNetworkAction } from './WorldNetworkAction'
+import { NetworkWorldAction } from './NetworkWorldAction'
 
 export async function validateNetworkObjects(world: World): Promise<void> {
   for (const [userId, client] of world.clients) {
@@ -11,9 +11,7 @@ export async function validateNetworkObjects(world: World): Promise<void> {
     if (Date.now() - client.lastSeenTs > 30000) {
       console.log('Removing client ', userId, ' due to inactivity')
 
-      dispatchAction(WorldNetworkAction.destroyClient({ $from: userId }), [
-        Engine.instance.currentWorld.worldNetwork.hostId
-      ])
+      dispatchAction(world.store, NetworkWorldAction.destroyClient({ $from: userId }))
 
       console.log('Disconnected Client:', client.userId)
       if (client?.instanceRecvTransport) {

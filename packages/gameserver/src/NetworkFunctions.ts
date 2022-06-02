@@ -1,6 +1,5 @@
 import AWS from 'aws-sdk'
 import { DataConsumer, DataProducer } from 'mediasoup/node/lib/types'
-import { Socket } from 'socket.io'
 
 import { UserInterface } from '@xrengine/common/src/dbmodels/UserInterface'
 import { User } from '@xrengine/common/src/interfaces/User'
@@ -10,8 +9,8 @@ import checkPositionIsValid from '@xrengine/engine/src/common/functions/checkPos
 import { performance } from '@xrengine/engine/src/common/functions/performance'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
+import { NetworkWorldAction } from '@xrengine/engine/src/networking/functions/NetworkWorldAction'
 import { JoinWorldProps } from '@xrengine/engine/src/networking/functions/receiveJoinWorld'
-import { WorldNetworkAction } from '@xrengine/engine/src/networking/functions/WorldNetworkAction'
 import { AvatarProps } from '@xrengine/engine/src/networking/interfaces/WorldState'
 import { Object3DComponent } from '@xrengine/engine/src/scene/components/Object3DComponent'
 import { TransformComponent } from '@xrengine/engine/src/transform/components/TransformComponent'
@@ -22,18 +21,18 @@ import { localConfig } from '@xrengine/server-core/src/config'
 import multiLogger from '@xrengine/server-core/src/logger'
 import getLocalServerIp from '@xrengine/server-core/src/util/get-local-server-ip'
 
-import { SocketWebRTCServerNetwork } from './SocketWebRTCServerNetwork'
+import { SocketWebRTCServerTransport } from './SocketWebRTCServerTransport'
 import { closeTransport } from './WebRTCFunctions'
 
 const logger = multiLogger.child({ component: 'gameserver:network' })
 const gsNameRegex = /gameserver-([a-zA-Z0-9]{5}-[a-zA-Z0-9]{5})/
 
-export const setupSubdomain = async (network: SocketWebRTCServerNetwork) => {
-  const app = network.app
+export const setupSubdomain = async (transport: SocketWebRTCServerTransport) => {
+  const app = transport.app
   let stringSubdomainNumber: string
 
   if (config.kubernetes.enabled) {
-    await cleanupOldGameservers(network)
+    await cleanupOldGameservers(transport)
     app.gameServer = await app.agonesSDK.getGameServer()
 
     // We used to provision subdomains for gameservers, e.g. 00001.gameserver.domain.com
@@ -62,6 +61,13 @@ export const setupSubdomain = async (network: SocketWebRTCServerNetwork) => {
     //   HostedZoneId: config.aws.route53.hostedZoneId
     // }
     // if (config.gameserver.local !== true) await Route53.changeResourceRecordSets(params as any).promise()
+  } else {
+    try {
+      // is this needed?
+      await app.service('instance').Model.update({ ended: true, assigned: false, assignedAt: null }, { where: {} })
+    } catch (error) {
+      logger.warn(error)
+    }
   }
 
   // Set up our gameserver according to our current environment
@@ -77,18 +83,18 @@ export const setupSubdomain = async (network: SocketWebRTCServerNetwork) => {
 }
 
 export async function getFreeSubdomain(
-  network: SocketWebRTCServerNetwork,
+  transport: SocketWebRTCServerTransport,
   gsIdentifier: string,
   subdomainNumber: number
 ): Promise<string> {
   const stringSubdomainNumber = subdomainNumber.toString().padStart(config.gameserver.identifierDigits, '0')
-  const subdomainResult = await network.app.service('gameserver-subdomain-provision').find({
+  const subdomainResult = await transport.app.service('gameserver-subdomain-provision').find({
     query: {
       gs_number: stringSubdomainNumber
     }
   })
   if ((subdomainResult as any).total === 0) {
-    await network.app.service('gameserver-subdomain-provision').create({
+    await transport.app.service('gameserver-subdomain-provision').create({
       allocated: true,
       gs_number: stringSubdomainNumber,
       gs_id: gsIdentifier
@@ -100,19 +106,19 @@ export async function getFreeSubdomain(
       }, 500)
     )
 
-    const newSubdomainResult = (await network.app.service('gameserver-subdomain-provision').find({
+    const newSubdomainResult = (await transport.app.service('gameserver-subdomain-provision').find({
       query: {
         gs_number: stringSubdomainNumber
       }
     })) as any
     if (newSubdomainResult.total > 0 && newSubdomainResult.data[0].gs_id === gsIdentifier) return stringSubdomainNumber
-    else return getFreeSubdomain(network, gsIdentifier, subdomainNumber + 1)
+    else return getFreeSubdomain(transport, gsIdentifier, subdomainNumber + 1)
   } else {
     const subdomain = (subdomainResult as any).data[0]
     if (subdomain.allocated === true || subdomain.allocated === 1) {
-      return getFreeSubdomain(network, gsIdentifier, subdomainNumber + 1)
+      return getFreeSubdomain(transport, gsIdentifier, subdomainNumber + 1)
     }
-    await network.app.service('gameserver-subdomain-provision').patch(subdomain.id, {
+    await transport.app.service('gameserver-subdomain-provision').patch(subdomain.id, {
       allocated: true,
       gs_id: gsIdentifier
     })
@@ -123,25 +129,25 @@ export async function getFreeSubdomain(
       }, 500)
     )
 
-    const newSubdomainResult = (await network.app.service('gameserver-subdomain-provision').find({
+    const newSubdomainResult = (await transport.app.service('gameserver-subdomain-provision').find({
       query: {
         gs_number: stringSubdomainNumber
       }
     })) as any
     if (newSubdomainResult.total > 0 && newSubdomainResult.data[0].gs_id === gsIdentifier) return stringSubdomainNumber
-    else return getFreeSubdomain(network, gsIdentifier, subdomainNumber + 1)
+    else return getFreeSubdomain(transport, gsIdentifier, subdomainNumber + 1)
   }
 }
 
-export async function cleanupOldGameservers(network: SocketWebRTCServerNetwork): Promise<void> {
-  const instances = await network.app.service('instance').Model.findAndCountAll({
+export async function cleanupOldGameservers(transport: SocketWebRTCServerTransport): Promise<void> {
+  const instances = await transport.app.service('instance').Model.findAndCountAll({
     offset: 0,
     limit: 1000,
     where: {
       ended: false
     }
   })
-  const gameservers = await network.app.k8AgonesClient.listNamespacedCustomObject(
+  const gameservers = await transport.app.k8AgonesClient.listNamespacedCustomObject(
     'agones.dev',
     'v1',
     'default',
@@ -158,7 +164,7 @@ export async function cleanupOldGameservers(network: SocketWebRTCServerNetwork):
         return gs.status.address === ip && inputPort.port.toString() === port
       })
       return match == null
-        ? network.app.service('instance').patch(instance.id, {
+        ? transport.app.service('instance').patch(instance.id, {
             ended: true
           })
         : Promise.resolve()
@@ -169,7 +175,7 @@ export async function cleanupOldGameservers(network: SocketWebRTCServerNetwork):
     gsNameRegex.exec(gs.metadata.name) != null ? gsNameRegex.exec(gs.metadata.name)![1] : null
   )
 
-  await network.app.service('gameserver-subdomain-provision').patch(
+  await transport.app.service('gameserver-subdomain-provision').patch(
     null,
     {
       allocated: false
@@ -186,14 +192,14 @@ export async function cleanupOldGameservers(network: SocketWebRTCServerNetwork):
   return
 }
 
-export function getUserIdFromSocketId(socketId: string) {
+export function getUserIdFromSocketId(socketId) {
   const client = Array.from(Engine.instance.currentWorld.clients.values()).find((c) => c.socketId === socketId)
   return client?.userId
 }
 
 export async function handleConnectToWorld(
-  network: SocketWebRTCServerNetwork,
-  socket: Socket,
+  transport: SocketWebRTCServerTransport,
+  socket,
   data,
   callback,
   userId: UserId,
@@ -201,9 +207,9 @@ export async function handleConnectToWorld(
 ) {
   logger.info('Connect to world from ' + userId)
 
-  if (disconnectClientIfConnected(network, socket, userId)) return callback(null! as any)
+  if (disconnectClientIfConnected(socket, userId)) return callback(null! as any)
 
-  const avatarDetail = (await network.app.service('avatar').get(user.avatarId)) as AvatarProps
+  const avatarDetail = (await transport.app.service('avatar').get(user.avatarId)) as AvatarProps
 
   // Create a new client object
   // and add to the dictionary
@@ -231,11 +237,11 @@ export async function handleConnectToWorld(
 
   // Return initial world state to client to set things up
   callback({
-    routerRtpCapabilities: network.routers.instance[0].rtpCapabilities
+    routerRtpCapabilities: transport.routers.instance[0].rtpCapabilities
   })
 }
 
-function disconnectClientIfConnected(network: SocketWebRTCServerNetwork, socket: Socket, userId: UserId) {
+function disconnectClientIfConnected(socket, userId: UserId) {
   // If we are already logged in, kick the other socket
   const world = Engine.instance.currentWorld
   if (world.clients.has(userId) && world.clients.get(userId)!.socketId !== socket.id) {
@@ -248,28 +254,27 @@ function disconnectClientIfConnected(network: SocketWebRTCServerNetwork, socket:
     // client.socket?.disconnect()
     // for (const eid of world.getOwnedNetworkObjects(userId)) {
     //   const { networkId } = getComponent(eid, NetworkObjectComponent)
-    //   dispatchFrom(network.hostId, () => WorldNetworkAction.destroyObject({ $from: userId, networkId }))
+    //   dispatchFrom(world.hostId, () => NetworkWorldAction.destroyObject({ $from: userId, networkId }))
     // }
     return true
   }
 }
 
 export const handleJoinWorld = async (
-  network: SocketWebRTCServerNetwork,
-  socket: Socket,
+  transport: SocketWebRTCServerTransport,
+  socket,
   data,
   callback: (args: JoinWorldProps) => void,
   joinedUserId: UserId,
   user
 ) => {
-  logger.info('Join World Request Received: %o', { joinedUserId, data, user })
-  if (disconnectClientIfConnected(network, socket, joinedUserId)) return callback(null! as any)
+  if (disconnectClientIfConnected(socket, joinedUserId)) return callback(null! as any)
 
   let spawnPose = SpawnPoints.instance.getRandomSpawnPoint()
   const inviteCode = data['inviteCode']
 
   if (inviteCode) {
-    const result = (await network.app.service('user').find({
+    const result = (await transport.app.service('user').find({
       query: {
         action: 'invite-code-lookup',
         inviteCode: inviteCode
@@ -302,14 +307,14 @@ export const handleJoinWorld = async (
     }
   }
 
-  logger.info('User successfully joined world: %o', { joinedUserId, data, spawnPose })
+  logger.info('JoinWorld received: %o', { joinedUserId, data, spawnPose })
   const world = Engine.instance.currentWorld
   const client = world.clients.get(joinedUserId)!
 
   if (!client) return callback(null! as any)
 
-  clearCachedActionsForDisconnectedUsers(network)
-  clearCachedActionsForUser(network, joinedUserId)
+  clearCachedActionsForDisconnectedUsers()
+  clearCachedActionsForUser(joinedUserId)
 
   // send all client info
   // const clients = [] as Array<{ userId: UserId; name: string; index: number }>
@@ -318,10 +323,8 @@ export const handleJoinWorld = async (
   // }
 
   // send all cached and outgoing actions to joining user
-  const cachedActions = [] as Required<Action>[]
-  for (const action of Engine.instance.store.actions.cached[network.hostId] as Array<
-    ReturnType<typeof WorldNetworkAction.spawnAvatar>
-  >) {
+  const cachedActions = [] as Required<Action<any>>[]
+  for (const action of world.store.actions.cached as Array<ReturnType<typeof NetworkWorldAction.spawnAvatar>>) {
     // we may have a need to remove the check for the prefab type to enable this to work for networked objects too
     if (action.type === 'network.SPAWN_OBJECT' && action.prefab === 'avatar') {
       const ownerId = action.$from
@@ -334,7 +337,7 @@ export const handleJoinWorld = async (
         }
       }
     }
-    if (action.$to === 'all' || action.$to === joinedUserId) cachedActions.push({ ...action, $stack: undefined! })
+    if (action.$to === 'all' || action.$to === joinedUserId) cachedActions.push(action)
   }
 
   logger.info('Sending cached actions: %o', cachedActions)
@@ -349,30 +352,30 @@ export const handleJoinWorld = async (
   })
 }
 
-export function handleIncomingActions(network: SocketWebRTCServerNetwork, socket: Socket, message) {
+export function handleIncomingActions(socket, message) {
   if (!message) return
 
   const world = Engine.instance.currentWorld
   const userIdMap = {} as { [socketId: string]: UserId }
   for (const [id, client] of world.clients) userIdMap[client.socketId!] = id
 
-  const actions = /*decode(new Uint8Array(*/ message /*))*/ as Required<Action>[]
+  const actions = /*decode(new Uint8Array(*/ message /*))*/ as Required<Action<any>>[]
   for (const a of actions) {
     a['$fromSocketId'] = socket.id
     a.$from = userIdMap[socket.id]
-    dispatchAction(a, [network.hostId])
+    dispatchAction(world.store, a)
   }
   // logger.info('SERVER INCOMING ACTIONS: %s', JSON.stringify(actions))
 }
 
-export async function handleHeartbeat(socket: Socket): Promise<any> {
+export async function handleHeartbeat(socket): Promise<any> {
   const userId = getUserIdFromSocketId(socket.id)!
   // logger.info('Got heartbeat from user ' + userId + ' at ' + Date.now())
   if (Engine.instance.currentWorld.clients.has(userId))
     Engine.instance.currentWorld.clients.get(userId)!.lastSeenTs = Date.now()
 }
 
-export async function handleDisconnect(network: SocketWebRTCServerNetwork, socket: Socket): Promise<any> {
+export async function handleDisconnect(socket): Promise<any> {
   const world = Engine.instance.currentWorld
   const userId = getUserIdFromSocketId(socket.id) as UserId
   const disconnectedClient = world?.clients.get(userId)
@@ -384,7 +387,7 @@ export async function handleDisconnect(network: SocketWebRTCServerNetwork, socke
   // The new connection will overwrite the socketID for the user's client.
   // This will only clear transports if the client's socketId matches the socket that's disconnecting.
   if (socket.id === disconnectedClient?.socketId) {
-    dispatchAction(WorldNetworkAction.destroyClient({ $from: userId }), [network.hostId])
+    dispatchAction(world.store, NetworkWorldAction.destroyClient({ $from: userId }))
     logger.info('Disconnecting clients for user ' + userId)
     if (disconnectedClient?.instanceRecvTransport) disconnectedClient.instanceRecvTransport.close()
     if (disconnectedClient?.instanceSendTransport) disconnectedClient.instanceSendTransport.close()
@@ -396,23 +399,23 @@ export async function handleDisconnect(network: SocketWebRTCServerNetwork, socke
 }
 
 export async function handleLeaveWorld(
-  network: SocketWebRTCServerNetwork,
-  socket: Socket,
+  networkTransport: SocketWebRTCServerTransport,
+  socket,
   data,
   callback
 ): Promise<any> {
   const world = Engine.instance.currentWorld
   const userId = getUserIdFromSocketId(socket.id)!
-  for (const [, transport] of Object.entries(network.mediasoupTransports))
-    if ((transport as any).appData.peerId === userId) closeTransport(network, transport)
+  for (const [, transport] of Object.entries(networkTransport.mediasoupTransports))
+    if ((transport as any).appData.peerId === userId) closeTransport(networkTransport, transport)
   if (world.clients.has(userId)) {
-    dispatchAction(WorldNetworkAction.destroyClient({ $from: userId }))
+    dispatchAction(world.store, NetworkWorldAction.destroyClient({ $from: userId }))
   }
   if (callback !== undefined) callback({})
 }
 
-export function clearCachedActionsForDisconnectedUsers(network: SocketWebRTCServerNetwork) {
-  const cached = Engine.instance.store.actions.cached[network.hostId]
+export function clearCachedActionsForDisconnectedUsers() {
+  const cached = Engine.instance.currentWorld.store.actions.cached
   for (const action of [...cached]) {
     if (!Engine.instance.currentWorld.clients.has(action.$from)) {
       const idx = cached.indexOf(action)
@@ -421,8 +424,8 @@ export function clearCachedActionsForDisconnectedUsers(network: SocketWebRTCServ
   }
 }
 
-export function clearCachedActionsForUser(network: SocketWebRTCServerNetwork, user: UserId) {
-  const cached = Engine.instance.store.actions.cached[network.hostId]
+export function clearCachedActionsForUser(user: UserId) {
+  const cached = Engine.instance.currentWorld.store.actions.cached
   for (const action of [...cached]) {
     if (action.$from === user) {
       const idx = cached.indexOf(action)

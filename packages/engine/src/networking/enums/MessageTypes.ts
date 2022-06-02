@@ -29,5 +29,6 @@ export enum MessageTypes {
   ConnectToWorld = 28, // TODO: refactor this to be entirely network aciton dispatch
   WebRTCRequestCurrentProducers = 29,
   InitializeRouter = 31,
+  WebRTCRequestNearbyUsers = 32,
   ActionData = 42
 }

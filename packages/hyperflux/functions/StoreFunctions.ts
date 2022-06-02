@@ -1,21 +1,19 @@
 import { State } from '@speigg/hookstate'
-import { Validator } from 'ts-matches'
 
-import { addTopic } from '..'
 import { Action, ActionReceptor } from './ActionFunctions'
 
 export type StringLiteral<T> = T extends string ? (string extends T ? never : T) : never
-export interface HyperStore {
+export interface HyperStore<StoreName extends string> {
   /**
-   * The topic to dispatch to when none are supplied
+   * The name of this store, used for logging and type checking.
    */
-  defaultTopic: string
+  name: StringLiteral<StoreName>
   /**
    *  If the store mode is `local`, actions are dispatched on the incoming queue.
    *  If the store mode is `host`, actions are dispatched on the incoming queue and then forwarded to the outgoing queue.
    *  If the store mode is `peer`, actions are dispatched on the outgoing queue.
    */
-  getDispatchMode: (topic: string) => 'local' | 'host' | 'peer'
+  getDispatchMode: () => 'local' | 'host' | 'peer'
   /**
    * A function which returns the dispatch id assigned to actions
    * */
@@ -31,74 +29,61 @@ export interface HyperStore {
   /**
    * State dictionary
    */
-  state: { [type: string]: State<any> }
+  state: { [name: string]: State<any> }
   actions: {
-    /** */
-    queues: Map<Validator<any, any>, Array<Array<Action>>>
     /** Cached actions */
-    cached: Record<string, Array<Required<Action>>>
+    cached: Array<Required<Action<StoreName>>>
     /** Incoming actions */
-    incoming: Array<Required<Action>>
+    incoming: Array<Required<Action<StoreName>>>
     /** All incoming actions that have been proccessed */
-    incomingHistory: Array<Required<Action>>
+    incomingHistory: Array<Required<Action<StoreName>>>
     /** All incoming action UUIDs that have been processed */
     incomingHistoryUUIDs: Set<string>
     /** Outgoing actions */
-    outgoing: Record<
-      string,
-      {
-        /** All actions that are waiting to be sent */
-        queue: Array<Required<Action>>
-        /** All actions that have been sent */
-        history: Array<Required<Action>>
-        /** All incoming action UUIDs that have been processed */
-        historyUUIDs: Set<string>
-      }
-    >
+    outgoing: Array<Required<Action<StoreName>>>
+    /** All actions that have been sent */
+    outgoingHistory: Array<Required<Action<StoreName>>>
+    /** All incoming action UUIDs that have been processed */
+    outgoingHistoryUUIDs: Set<string>
   }
   /** functions that receive actions */
-  receptors: ReadonlyArray<ActionReceptor>
+  receptors: ReadonlyArray<ActionReceptor<StoreName>>
   /** functions that re-run on state changes, compatible w/ React hooks */
   reactors: WeakMap<() => void, any>
 }
 
-export class HyperFlux {
-  static store: HyperStore
-}
-
-function createHyperStore(options: {
-  getDispatchMode?: (topic: string) => 'local' | 'host' | 'peer'
+function createHyperStore<StoreName extends string>(options: {
+  name: StringLiteral<StoreName>
+  getDispatchMode?: () => 'local' | 'host' | 'peer'
   getDispatchId: () => string
   getDispatchTime: () => number
   defaultDispatchDelay?: number
 }) {
-  const store = {
-    defaultTopic: 'default',
+  return {
+    name: options.name,
     getDispatchMode: options.getDispatchMode ?? (() => 'local'),
     getDispatchId: options.getDispatchId,
     getDispatchTime: options.getDispatchTime,
     defaultDispatchDelay: options.defaultDispatchDelay ?? 0,
     state: {},
     actions: {
-      queues: new Map(),
-      cached: {},
+      cached: [],
       incoming: [],
       incomingHistory: [],
       incomingHistoryUUIDs: new Set(),
-      outgoing: {}
+      outgoing: [],
+      outgoingHistory: [],
+      outgoingHistoryUUIDs: new Set()
     },
     receptors: [],
     reactors: new WeakMap()
-  } as HyperStore
-  addTopic(store.defaultTopic, store)
-  HyperFlux.store = store
-  return store
+  } as HyperStore<StoreName>
 }
 
 // function destroyStore(store = getStore()) {
-//   for (const reactor of [...store.reactors]) {
-//     StateFunctions.removeStateReactor(reactor)
-//   }
+//     for (const reactor of [...store.reactors]) {
+//         StateFunctions.removeStateReactor(reactor)
+//     }
 // }
 
 export default {

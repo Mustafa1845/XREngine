@@ -321,11 +321,6 @@ const blockchain = {
   blockchainUrl: process.env.BLOCKCHAIN_URL,
   blockchainUrlSecret: process.env.BLOCKCHAIN_URL_SECRET
 }
-
-const ipfs = {
-  enabled: process.env.USE_IPFS
-}
-
 /**
  * Full config
  */
@@ -340,7 +335,6 @@ const config = {
   db,
   email,
   gameserver,
-  ipfs,
   server,
   redis,
   scopes,

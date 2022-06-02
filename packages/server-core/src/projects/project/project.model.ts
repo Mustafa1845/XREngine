@@ -21,6 +21,9 @@ export default (app: Application) => {
       thumbnail: {
         type: DataTypes.STRING
       },
+      storageProviderPath: {
+        type: DataTypes.STRING
+      },
       repositoryPath: {
         type: DataTypes.STRING
       },

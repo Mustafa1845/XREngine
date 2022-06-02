@@ -5,7 +5,7 @@ import { Invite, SendInvite } from '@xrengine/common/src/interfaces/Invite'
 import { InviteResult } from '@xrengine/common/src/interfaces/InviteResult'
 import { User } from '@xrengine/common/src/interfaces/User'
 
-import { NotificationService } from '../../common/services/NotificationService'
+import { AlertService } from '../../common/services/AlertService'
 import { client } from '../../feathers'
 import { store, useDispatch } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
@@ -103,20 +103,20 @@ export const InviteService = {
 
     if (data.identityProviderType === 'email') {
       if (emailRegex.test(data.token) !== true) {
-        NotificationService.dispatchNotify('Invalid email address', { variant: 'error' })
+        AlertService.dispatchAlertError(new Error('Invalid email address'))
         return
       }
     }
     if (data.identityProviderType === 'sms') {
       if (phoneRegex.test(data.token) !== true) {
-        NotificationService.dispatchNotify('Invalid 10-digit US phone number', { variant: 'error' })
+        AlertService.dispatchAlertError(new Error('Invalid 10-digit US phone number'))
         return
       }
     }
 
     if (data.inviteCode != null) {
       if (!inviteCodeRegex.test(data.inviteCode)) {
-        NotificationService.dispatchNotify('Invalid Invite Code', { variant: 'error' })
+        AlertService.dispatchAlertError(new Error('Invalid Invite Code'))
         return
       } else {
         try {
@@ -128,24 +128,24 @@ export const InviteService = {
           })) as Paginated<User>
 
           if (userResult.total === 0) {
-            NotificationService.dispatchNotify('No user has that invite code', { variant: 'error' })
+            AlertService.dispatchAlertError(new Error('No user has that invite code'))
             return
           }
-        } catch (err) {
-          NotificationService.dispatchNotify(err.message, { variant: 'error' })
+        } catch (error) {
+          AlertService.dispatchAlertError(error)
         }
       }
     }
 
     if (data.invitee != null) {
       if (userIdRegex.test(data.invitee) !== true) {
-        NotificationService.dispatchNotify('Invalid user ID', { variant: 'error' })
+        AlertService.dispatchAlertError(new Error('Invalid user ID'))
         return
       }
     }
 
     if ((data.token == null || data.token.length === 0) && (data.invitee == null || data.invitee.length === 0)) {
-      NotificationService.dispatchNotify('Not a valid recipient', { variant: 'error' })
+      AlertService.dispatchAlertError(new Error(`Not a valid recipient`))
       return
     }
 
@@ -165,10 +165,10 @@ export const InviteService = {
       let inviteResult
       if (existingInviteResult.total === 0) inviteResult = await client.service('invite').create(params)
 
-      NotificationService.dispatchNotify('Invite Sent', { variant: 'success' })
+      AlertService.dispatchAlertSuccess('Invite Sent')
       dispatch(InviteAction.sentInvite(inviteResult))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   retrieveReceivedInvites: async (
@@ -207,7 +207,7 @@ export const InviteService = {
       })) as Paginated<Invite>
       dispatch(InviteAction.retrievedReceivedInvites(inviteResult))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   retrieveSentInvites: async (
@@ -245,7 +245,7 @@ export const InviteService = {
       })) as Paginated<Invite>
       dispatch(InviteAction.retrievedSentInvites(inviteResult))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   removeInvite: async (inviteId: string) => {
@@ -255,7 +255,7 @@ export const InviteService = {
       await client.service('invite').remove(inviteId)
       dispatch(InviteAction.removedSentInvite())
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   acceptInvite: async (inviteId: string, passcode: string) => {
@@ -269,7 +269,7 @@ export const InviteService = {
       })
       dispatch(InviteAction.acceptedInvite())
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   declineInvite: async (invite: Invite) => {
@@ -279,7 +279,7 @@ export const InviteService = {
       await client.service('invite').remove(invite.id)
       dispatch(InviteAction.declinedInvite())
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   updateInviteTarget: async (targetObjectType?: string, targetObjectId?: string) => {

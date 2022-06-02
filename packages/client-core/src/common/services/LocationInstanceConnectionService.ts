@@ -7,16 +7,15 @@ import { UserId } from '@xrengine/common/src/interfaces/UserId'
 import logger from '@xrengine/common/src/logger'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { EngineActions } from '@xrengine/engine/src/ecs/classes/EngineState'
-import { NetworkTypes } from '@xrengine/engine/src/networking/classes/Network'
+import { Network } from '@xrengine/engine/src/networking/classes/Network'
 import { dispatchAction } from '@xrengine/hyperflux'
 
 import { client } from '../../feathers'
 import { accessLocationState } from '../../social/services/LocationService'
 import { store, useDispatch } from '../../store'
-import { leaveNetwork } from '../../transports/SocketWebRTCClientFunctions'
-import { SocketWebRTCClientNetwork } from '../../transports/SocketWebRTCClientNetwork'
+import { leave } from '../../transports/SocketWebRTCClientFunctions'
+import { SocketWebRTCClientTransport } from '../../transports/SocketWebRTCClientTransport'
 import { accessAuthState } from '../../user/services/AuthService'
-import { NetworkConnectionService } from './NetworkConnectionService'
 
 type InstanceState = {
   ipAddress: string
@@ -26,23 +25,21 @@ type InstanceState = {
   provisioned: boolean
   connected: boolean
   readyToConnect: boolean
+  updateNeeded: boolean
   connecting: boolean
 }
 
 //State
 const state = createState({
-  instances: {} as { [id: string]: InstanceState }
+  instances: {} as { [id: string]: InstanceState },
+  currentInstanceId: null as string | null
 })
 
 store.receptors.push((action: LocationInstanceConnectionActionType): any => {
   state.batch((s) => {
     switch (action.type) {
       case 'LOCATION_INSTANCE_SERVER_PROVISIONED':
-        Engine.instance.currentWorld._worldHostId = action.instanceId as UserId
-        Engine.instance.currentWorld.networks.set(
-          action.instanceId,
-          new SocketWebRTCClientNetwork(action.instanceId, NetworkTypes.world)
-        )
+        s.currentInstanceId.set(action.instanceId)
         return s.instances[action.instanceId].set({
           ipAddress: action.ipAddress,
           port: action.port,
@@ -50,6 +47,7 @@ store.receptors.push((action: LocationInstanceConnectionActionType): any => {
           sceneId: action.sceneId!,
           provisioned: true,
           readyToConnect: true,
+          updateNeeded: true,
           connected: false,
           connecting: false
         })
@@ -59,6 +57,7 @@ store.receptors.push((action: LocationInstanceConnectionActionType): any => {
         return s.instances[action.instanceId].merge({
           connected: true,
           connecting: false,
+          updateNeeded: false,
           readyToConnect: false
         })
       case 'LOCATION_INSTANCE_SERVER_DISCONNECT':
@@ -99,16 +98,19 @@ export const LocationInstanceConnectionService = {
     if (provisionResult.ipAddress && provisionResult.port) {
       dispatch(LocationInstanceConnectionAction.serverProvisioned(provisionResult, locationId!, sceneId!))
     } else {
-      dispatchAction(NetworkConnectionService.actions.noWorldServersAvailable({ instanceId: instanceId ?? '' }))
+      dispatchAction(
+        Engine.instance.store,
+        SocketWebRTCClientTransport.actions.noWorldServersAvailable({ instanceId: instanceId! })
+      )
     }
   },
   connectToServer: async (instanceId: string) => {
     const dispatch = useDispatch()
     dispatch(LocationInstanceConnectionAction.connecting(instanceId))
-    const transport = Engine.instance.currentWorld.worldNetwork as SocketWebRTCClientNetwork
+    const transport = Network.instance.getTransport('world' as UserId) as SocketWebRTCClientTransport
     logger.info({ socket: !!transport.socket, transport }, 'Connect To World Server')
     if (transport.socket) {
-      await leaveNetwork(transport, false)
+      await leave(transport, false)
     }
     const locationState = accessLocationState()
     const currentLocation = locationState.currentLocation.location
@@ -116,8 +118,16 @@ export const LocationInstanceConnectionService = {
 
     const { ipAddress, port } = accessLocationInstanceConnectionState().instances.value[instanceId]
 
-    await transport.initialize({ sceneId, port, ipAddress, locationId: currentLocation.id.value })
-    transport.left = false
+    try {
+      await transport.initialize({ sceneId, port, ipAddress, instanceId, locationId: currentLocation.id.value })
+      transport.left = false
+
+      const authState = accessAuthState()
+      const user = authState.user.value
+      dispatchAction(Engine.instance.store, EngineActions.connect({ id: user.id! }))
+    } catch (error) {
+      logger.error(error, 'Network transport could not initialize, transport is: ' + transport)
+    }
   }
 }
 

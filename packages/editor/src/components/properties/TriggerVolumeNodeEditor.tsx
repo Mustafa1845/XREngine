@@ -41,13 +41,11 @@ export const TriggerVolumeNodeEditor: EditorComponentType = (props) => {
   const onChangeTarget = (target) => {
     setPropertyOnSelectionEntities({
       component: TriggerVolumeComponent,
-      properties: [
-        {
-          target,
-          onEnter: '',
-          onExit: ''
-        }
-      ]
+      properties: {
+        target,
+        onEnter: '',
+        onExit: ''
+      }
     })
   }
 

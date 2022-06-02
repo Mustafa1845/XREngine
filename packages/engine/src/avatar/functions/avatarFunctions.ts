@@ -19,8 +19,6 @@ import {
   Vector3
 } from 'three'
 
-import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
-
 import { AssetLoader } from '../../assets/classes/AssetLoader'
 import { AssetType } from '../../assets/enum/AssetType'
 import { AnimationManager } from '../../avatar/AnimationManager'
@@ -31,7 +29,6 @@ import { Entity } from '../../ecs/classes/Entity'
 import { addComponent, getComponent, hasComponent, removeComponent } from '../../ecs/functions/ComponentFunctions'
 import { VelocityComponent } from '../../physics/components/VelocityComponent'
 import UpdateableObject3D from '../../scene/classes/UpdateableObject3D'
-import { NameComponent } from '../../scene/components/NameComponent'
 import { Object3DComponent } from '../../scene/components/Object3DComponent'
 import { UpdatableComponent } from '../../scene/components/UpdatableComponent'
 import { ObjectLayers } from '../../scene/constants/ObjectLayers'
@@ -64,17 +61,8 @@ export const loadAvatarModelAsset = async (avatarURL: string) => {
   parent.add(root)
   parent.userData = scene.userData
 
-  scene.traverse((obj) => {
-    //TODO: To avoid the changes of the source material
-    if (obj.material && obj.material.clone) {
-      obj.material = obj.material.clone()
-      //TODO: to fix alphablend issue of some models (mostly fbx converted models)
-      obj.material.depthWrite = true
-      obj.material.depthTest = true
-    }
-    // Enable shadow for avatars
-    obj.castShadow = true
-  })
+  // Enable shadow for avatars
+  parent.traverse((obj) => (obj.castShadow = true))
   return SkeletonUtils.clone(parent)
 }
 
@@ -98,7 +86,7 @@ export const setupAvatarForUser = (entity: Entity, model: Object3D) => {
   setupAvatarModel(entity)(model)
   setupAvatarHeight(entity, model)
 
-  const avatarMaterials = setupAvatarMaterials(entity, model)
+  const avatarMaterials = setupAvatarMaterials(model)
 
   // Materials only load on the client currently
   if (isClient) {
@@ -195,7 +183,7 @@ export const animateModel = (entity: Entity) => {
     .play()
 }
 
-export const setupAvatarMaterials = (entity, root) => {
+export const setupAvatarMaterials = (root) => {
   const materialList: Array<MaterialMap> = []
 
   setObjectLayers(root, ObjectLayers.Avatar)
@@ -203,10 +191,7 @@ export const setupAvatarMaterials = (entity, root) => {
     if (object.isBone) object.visible = false
     if (object.material && object.material.clone) {
       const material = object.material.clone()
-      // If local player's avatar
-      if (entity === Engine.instance.currentWorld.localClientEntity) {
-        setupHeadDecap(root, material)
-      }
+      setupHeadDecap(root, material)
       materialList.push({
         id: object.uuid,
         material: material

@@ -1,6 +1,6 @@
 import { ArrayCamera } from 'three'
 
-import { addActionReceptor, createActionQueue, dispatchAction } from '@xrengine/hyperflux'
+import { addActionReceptor, dispatchAction } from '@xrengine/hyperflux'
 
 import { AssetLoader } from '../../assets/classes/AssetLoader'
 import { BinaryValue } from '../../common/enums/BinaryValue'
@@ -14,7 +14,7 @@ import { InputComponent } from '../../input/components/InputComponent'
 import { LocalInputTagComponent } from '../../input/components/LocalInputTagComponent'
 import { InputType } from '../../input/enums/InputType'
 import { gamepadMapping } from '../../input/functions/GamepadInput'
-import { WorldNetworkAction } from '../../networking/functions/WorldNetworkAction'
+import { NetworkWorldAction } from '../../networking/functions/NetworkWorldAction'
 import { EngineRenderer } from '../../renderer/WebGLRendererSystem'
 import { ObjectLayers } from '../../scene/constants/ObjectLayers'
 import { XRInputSourceComponent } from '../components/XRInputSourceComponent'
@@ -30,29 +30,16 @@ const startXRSession = async () => {
     EngineRenderer.instance.xrSession = session
     EngineRenderer.instance.xrManager.setSession(session)
     EngineRenderer.instance.xrManager.setFoveation(1)
-    dispatchAction(EngineActions.xrSession())
+    dispatchAction(Engine.instance.store, EngineActions.xrSession())
 
     EngineRenderer.instance.xrManager.addEventListener('sessionend', async () => {
-      dispatchAction(EngineActions.xrEnd())
+      dispatchAction(Engine.instance.store, EngineActions.xrEnd())
     })
 
     startWebXR()
   } catch (e) {
     console.error('Failed to create XR Session', e)
   }
-}
-
-export function setXRModeReceptor(action: typeof WorldNetworkAction.setXRMode.matches._TYPE) {
-  // Current WebXRManager.getCamera() typedef is incorrect
-  // @ts-ignore
-  const cameras = EngineRenderer.instance.xrManager.getCamera() as ArrayCamera
-  cameras.layers.enableAll()
-  cameras.cameras.forEach((camera) => {
-    camera.layers.disableAll()
-    camera.layers.enable(ObjectLayers.Scene)
-    camera.layers.enable(ObjectLayers.Avatar)
-    camera.layers.enable(ObjectLayers.UI)
-  })
 }
 
 /**
@@ -65,7 +52,7 @@ export default async function XRSystem(world: World) {
   const xrControllerQuery = defineQuery([XRInputSourceComponent])
 
   ;(navigator as any).xr?.isSessionSupported('immersive-vr').then((supported) => {
-    dispatchAction(EngineActions.xrSupported({ xrSupported: supported }))
+    dispatchAction(Engine.instance.store, EngineActions.xrSupported({ xrSupported: supported }))
   })
 
   // TEMPORARY - precache controller model
@@ -77,7 +64,23 @@ export default async function XRSystem(world: World) {
     AssetLoader.loadAsync('/default_assets/controllers/hands/right_controller.glb')
   ])
 
-  addActionReceptor((a: EngineActionType) => {
+  addActionReceptor(world.store, (action) => {
+    switch (action.type) {
+      case NetworkWorldAction.setXRMode.type:
+        // Current WebXRManager.getCamera() typedef is incorrect
+        // @ts-ignore
+        const cameras = EngineRenderer.instance.xrManager.getCamera() as ArrayCamera
+        cameras.layers.enableAll()
+        cameras.cameras.forEach((camera) => {
+          camera.layers.disableAll()
+          camera.layers.enable(ObjectLayers.Scene)
+          camera.layers.enable(ObjectLayers.Avatar)
+          camera.layers.enable(ObjectLayers.UI)
+        })
+    }
+  })
+
+  addActionReceptor(Engine.instance.store, (a: EngineActionType) => {
     matches(a)
       .when(EngineActions.xrStart.matches, (action) => {
         if (getEngineState().joinedWorld.value && !EngineRenderer.instance.xrSession) startXRSession()
@@ -90,11 +93,7 @@ export default async function XRSystem(world: World) {
       })
   })
 
-  const setXRModeQueue = createActionQueue(WorldNetworkAction.setXRMode.matches)
-
   return () => {
-    for (const action of setXRModeQueue()) setXRModeReceptor(action)
-
     if (EngineRenderer.instance.xrManager?.isPresenting) {
       const session = Engine.instance.xrFrame.session
       for (const source of session.inputSources) {

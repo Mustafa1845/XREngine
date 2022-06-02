@@ -10,7 +10,6 @@ type AvatarInputSettingsStateType = {
   rotationSmoothSpeed: number
   rotationAngle: number
   rotationInvertAxes: boolean
-  showAvatar: boolean
 }
 
 const state = createState<AvatarInputSettingsStateType>({
@@ -24,8 +23,7 @@ const state = createState<AvatarInputSettingsStateType>({
   rotationSmoothSpeed: 0.1,
   // 15, 30, 45, 60
   rotationAngle: 30,
-  rotationInvertAxes: true,
-  showAvatar: true
+  rotationInvertAxes: true
 })
 
 export function AvatarInputSettingsReceptor(action: AvatarInputSettingsActionType) {
@@ -35,8 +33,6 @@ export function AvatarInputSettingsReceptor(action: AvatarInputSettingsActionTyp
         return s.merge({ controlType: action.controlType })
       case 'SET_INVERT_ROTATION_AND_MOVE_STICKS':
         return s.merge({ invertRotationAndMoveSticks: action.invertRotationAndMoveSticks })
-      case 'SET_SHOW_AVATAR':
-        return s.merge({ showAvatar: action.showAvatar })
     }
   }, action.type)
 }
@@ -57,13 +53,6 @@ export const AvatarInputSettingsAction = {
       store: 'ENGINE' as const,
       type: 'SET_INVERT_ROTATION_AND_MOVE_STICKS' as const,
       invertRotationAndMoveSticks
-    }
-  },
-  setShowAvatar: (showAvatar: boolean) => {
-    return {
-      store: 'ENGINE' as const,
-      type: 'SET_SHOW_AVATAR' as const,
-      showAvatar
     }
   }
 }

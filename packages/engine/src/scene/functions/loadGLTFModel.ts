@@ -13,8 +13,8 @@ import { Entity } from '../../ecs/classes/Entity'
 import { addComponent, ComponentMap, getComponent, removeComponent } from '../../ecs/functions/ComponentFunctions'
 import { createEntity } from '../../ecs/functions/EntityFunctions'
 import { NavMeshComponent } from '../../navigation/component/NavMeshComponent'
-import { matchActionOnce } from '../../networking/functions/matchActionOnce'
-import { WorldNetworkAction } from '../../networking/functions/WorldNetworkAction'
+import { matchActionOnce, receiveActionOnce } from '../../networking/functions/matchActionOnce'
+import { NetworkWorldAction } from '../../networking/functions/NetworkWorldAction'
 import { applyTransformToMeshWorld } from '../../physics/functions/parseModelColliders'
 import { TransformChildComponent } from '../../transform/components/TransformChildComponent'
 import { TransformComponent } from '../../transform/components/TransformComponent'
@@ -174,7 +174,7 @@ export const overrideTexture = (entity: Entity, object3d?: Object3D, world = Eng
 
     return
   } else {
-    matchActionOnce(EngineActions.sceneLoaded.matches, () => {
+    matchActionOnce(Engine.instance.store, EngineActions.sceneLoaded.matches, () => {
       overrideTexture(entity, object3d, world)
     })
   }
@@ -211,15 +211,15 @@ export const parseGLTFModel = (entity: Entity, props: ModelComponentType, obj3d:
     overrideTexture(entity, obj3d, world)
   }
 
-  if (!Engine.instance.isEditor && world.worldNetwork?.isHosting && props.isDynamicObject) {
+  if (world.isHosting && props.isDynamicObject) {
     const node = world.entityTree.entityNodeMap.get(entity)
     if (node) {
       dispatchAction(
-        WorldNetworkAction.spawnObject({
+        world.store,
+        NetworkWorldAction.spawnObject({
           prefab: '',
           parameters: { sceneEntityId: node.uuid }
-        }),
-        [Engine.instance.currentWorld.worldNetwork.hostId]
+        })
       )
     }
   }
