@@ -1,33 +1,19 @@
+# syntax = docker/dockerfile:1.2
 # not slim because we need github depedencies
-FROM node:16-buster-slim
-RUN apt-get update
-RUN apt-get install -y build-essential meson python3-testresources python3-venv python3-pip git procps
+FROM root-builder as builder
 # Create app directory
 WORKDIR /app
-RUN npm install -g npm lerna cross-env rimraf --loglevel notice
-# to make use of caching, copy only package files and install dependencies
 COPY package.json .
-COPY packages/analytics/package.json ./packages/analytics/
 COPY packages/client/package.json ./packages/client/
 COPY packages/client-core/package.json ./packages/client-core/
-COPY packages/common/package.json ./packages/common/
 COPY packages/editor/package.json ./packages/editor/
-COPY packages/engine/package.json ./packages/engine/
-COPY packages/gameserver/package.json ./packages/gameserver/
 COPY packages/hyperflux/package.json ./packages/hyperflux/
-COPY packages/engine/package.json ./packages/engine/
-COPY packages/matchmaking/package.json ./packages/matchmaking/
-COPY packages/server/package.json ./packages/server/
-COPY packages/server-core/package.json ./packages/server-core/
-COPY packages/projects/package.json ./packages/projects/
-COPY project-package-jsons ./
-#RUN  npm ci --verbose  # we should make lockfile or shrinkwrap then use npm ci for predicatble builds
 RUN npm install --production=false --loglevel notice --legacy-peer-deps
-COPY . .
 # copy then compile the code
+COPY . .
 ARG MYSQL_HOST
-ARG MYSQL_PORT
 ARG MYSQL_USER
+ARG MYSQL_PORT
 ARG MYSQL_PASSWORD
 ARG MYSQL_DATABASE
 ARG VITE_CLIENT_HOST
@@ -38,6 +24,7 @@ ARG VITE_MEDIATOR_SERVER
 ARG VITE_GAMESERVER_HOST
 ARG VITE_GAMESERVER_PORT
 ARG VITE_LOCAL_BUILD
+ARG VITE_APP_IC_ENV
 ARG VITE_APP_MAINNET_HOST_URL
 ARG VITE_APP_MAINNET_NFT_CANISTER_PRINCIPAL_ID
 ARG VITE_APP_MAINNET_NFT_CANISTER_ACCOUNT_ID
@@ -46,6 +33,8 @@ ARG VITE_APP_LOCAL_HOST_URL
 ARG VITE_APP_LOCAL_NFT_CANISTER_PRINCIPAL_ID
 ARG VITE_APP_LOCAL_NFT_CANISTER_ACCOUNT_ID
 ARG VITE_APP_LOCAL_USER_PRINCIPAL_ID
+ARG VITE_APP_MAINNET_SONIC_CANISTER_PRINCIPAL_ID
+ARG VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID
 ARG VITE_APP_LOCAL_RPC_URL
 ARG VITE_APP_TESTNET_RPC_URL
 ARG VITE_APP_TESTNET_ACCOUNT_PRIVATE_KEY
@@ -59,15 +48,13 @@ ARG VITE_APP_LOCAL_WICP_CANISTER_PRINCIPAL_ID
 ARG VITE_APP_LOCAL_WICP_CANISTER_ACCOUNT_ID
 ARG VITE_APP_LOCAL_BALL_COIN_CANISTER_PRINCIPAL_ID
 ARG VITE_APP_LOCAL_BALL_COIN_CANISTER_ACCOUNT_ID
-ARG VITE_APP_MAINNET_SONIC_CANISTER_PRINCIPAL_ID
-ARG VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID
 ARG VITE_APP_LOCAL_USER_SEED_PHRASE
 ARG VITE_APP_MAINNET_USER_SEED_PHRASE
 ENV MYSQL_HOST=$MYSQL_HOST
 ENV MYSQL_PORT=$MYSQL_PORT
-ENV MYSQL_USER=$MYSQL_USER
 ENV MYSQL_PASSWORD=$MYSQL_PASSWORD
 ENV MYSQL_DATABASE=$MYSQL_DATABASE
+ENV MYSQL_USER=$MYSQL_USER
 ENV VITE_CLIENT_HOST=$VITE_CLIENT_HOST
 ENV VITE_CLIENT_PORT=$VITE_CLIENT_PORT
 ENV VITE_SERVER_HOST=$VITE_SERVER_HOST
@@ -76,6 +63,7 @@ ENV VITE_MEDIATOR_SERVER=$VITE_MEDIATOR_SERVER
 ENV VITE_GAMESERVER_HOST=$VITE_GAMESERVER_HOST
 ENV VITE_GAMESERVER_PORT=$VITE_GAMESERVER_PORT
 ENV VITE_LOCAL_BUILD=$VITE_LOCAL_BUILD
+ENV VITE_APP_IC_ENV=$VITE_APP_IC_ENV
 ENV VITE_APP_MAINNET_HOST_URL=$VITE_APP_MAINNET_HOST_URL
 ENV VITE_APP_MAINNET_NFT_CANISTER_PRINCIPAL_ID=$VITE_APP_MAINNET_NFT_CANISTER_PRINCIPAL_ID
 ENV VITE_APP_MAINNET_NFT_CANISTER_ACCOUNT_ID=$VITE_APP_MAINNET_NFT_CANISTER_ACCOUNT_ID
@@ -102,7 +90,16 @@ ENV VITE_APP_TESTNET_SONIC_CANISTER_PRINCIPAL_ID=$VITE_APP_TESTNET_SONIC_CANISTE
 ENV VITE_APP_LOCAL_USER_SEED_PHRASE="$VITE_APP_LOCAL_USER_SEED_PHRASE"
 ENV VITE_APP_MAINNET_USER_SEED_PHRASE="$VITE_APP_MAINNET_USER_SEED_PHRASE"
 
+RUN npm run build-client
 
+ENV APP_ENV=production
 
-ARG CACHE_DATE
-RUN npm run check-db-exists
+FROM node:16-buster-slim as runner
+WORKDIR /app
+
+COPY --from=builder /app/packages/client ./packages/client
+COPY --from=builder /app/scripts ./scripts
+
+RUN npm install express app-root-path
+
+CMD ["scripts/start-server.sh"]
