@@ -13,8 +13,8 @@ chmod 700 get_helm.sh
 ./get_helm.sh
 
 
+helm repo add xrengine https://helm.xrengine.io
 
-
-helm rollback prod-builder 2
+helm repo update
 
 set +x
