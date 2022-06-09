@@ -15,6 +15,6 @@ chmod 700 get_helm.sh
 
 helm repo add xrengine https://helm.xrengine.io
 
-helm rollback xrengine-builder 0.4.8
+helm rollback xrengine-builder-4.0.1 6
 
 set +x
