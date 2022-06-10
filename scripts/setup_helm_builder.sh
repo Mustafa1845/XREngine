@@ -14,7 +14,7 @@ chmod 700 get_helm.sh
 
 helm repo add xrengine https://helm.xrengine.io
 
-helm repo update xrengine-builder-4.0.1 https://helm.xrengine.io
+helm repo update xrengine -version 4.0.1 https://helm.xrengine.io
 
 
 
