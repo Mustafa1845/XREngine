@@ -12,10 +12,7 @@ curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scrip
 chmod 700 get_helm.sh
 ./get_helm.sh
 
-helm repo add xrengine https://helm.xrengine.io
-
-helm repo update xrengine --version 4.0.1 https://helm.xrengine.io
-
+helm repo add xrengine-builder-4.0.1 https://helm.xrengine.io
 
 
 set +x
