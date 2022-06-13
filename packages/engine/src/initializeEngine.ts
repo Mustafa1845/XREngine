@@ -4,7 +4,6 @@ import { AudioListener, PerspectiveCamera } from 'three'
 
 import { BotUserAgent } from '@xrengine/common/src/constants/BotUserAgent'
 import { addActionReceptor, dispatchAction, registerState } from '@xrengine/hyperflux'
-import ActionFunctions from '@xrengine/hyperflux/functions/ActionFunctions'
 
 import { getGLTFLoader } from './assets/classes/AssetLoader'
 import { initializeKTX2Loader } from './assets/functions/createGLTFLoader'
@@ -12,7 +11,7 @@ import { isClient } from './common/functions/isClient'
 import { Timer } from './common/functions/Timer'
 import { Engine } from './ecs/classes/Engine'
 import { EngineActions, EngineEventReceptor, EngineState } from './ecs/classes/EngineState'
-import { createWorld } from './ecs/classes/World'
+import { createWorld, destroyWorld } from './ecs/classes/World'
 import { initSystems, SystemModuleType } from './ecs/functions/SystemFunctions'
 import { SystemUpdateType } from './ecs/functions/SystemUpdateType'
 import { matchActionOnce } from './networking/functions/matchActionOnce'
@@ -26,6 +25,9 @@ import { FontManager } from './xrui/classes/FontManager'
  * @returns {Engine}
  */
 export const createEngine = () => {
+  if (Engine.instance?.currentWorld) {
+    destroyWorld(Engine.instance.currentWorld)
+  }
   Engine.instance = new Engine()
   Engine.instance.currentWorld = createWorld()
   EngineRenderer.instance = new EngineRenderer()
@@ -241,10 +243,6 @@ export const initializeSceneSystems = async () => {
       {
         type: SystemUpdateType.UPDATE,
         systemModulePromise: import('./camera/systems/CameraSystem')
-      },
-      {
-        type: SystemUpdateType.FIXED,
-        systemModulePromise: import('./bot/systems/BotHookSystem')
       },
       {
         type: SystemUpdateType.FIXED,
