@@ -115,5 +115,4 @@ RUN npm run build-client
 
 ENV APP_ENV=production
 
-
 CMD ["scripts/start-server.sh"]
