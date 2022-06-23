@@ -2,4 +2,4 @@ charts:
   - name: xrengine
     repo:
       git: xrengine/xrsocial-ops
-      published: https://mustafa1845.github.io/Helm-xrengine/
+      published: https://helm.xrengine.io

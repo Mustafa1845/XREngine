@@ -17,17 +17,6 @@ export const locationSeed = {
       isLobby: false
     } as Location,
     {
-      id: '98cbcc30-fd2d-11ea-bc7c-cd4cac9a8d61',
-      name: 'Test',
-      slugifiedName: 'test',
-      maxUsersPerInstance: 30,
-      sceneId: 'default-project/test',
-      location_settings: locationSettingsSeed.templates.find(
-        (template) => template.locationId === '98cbcc30-fd2d-11ea-bc7c-cd4cac9a8d61'
-      ),
-      isLobby: false
-    } as Location,
-    {
       id: '98cbcc30-fd2d-11ea-bc7c-cd4cac9a8d62',
       name: 'Sky Station',
       slugifiedName: 'sky-station',
@@ -46,6 +35,17 @@ export const locationSeed = {
       sceneId: 'default-project/apartment',
       location_settings: locationSettingsSeed.templates.find(
         (template) => template.locationId === '98cbcc30-fd2d-11ea-bc7c-cd4cac9a8d63'
+      ),
+      isLobby: false
+    } as Location,
+    {
+      id: '98cbcc30-fd2d-11ea-bc7c-cd4cac9a8d6f',
+      name: 'Basketball',
+      slugifiedName: 'basketball',
+      maxUsersPerInstance: 30,
+      sceneId: 'default-project/basketball-demo',
+      location_settings: locationSettingsSeed.templates.find(
+        (template) => template.locationId === '98cbcc30-fd2d-11ea-bc7c-cd4cac9a8d6f'
       ),
       isLobby: false
     } as Location

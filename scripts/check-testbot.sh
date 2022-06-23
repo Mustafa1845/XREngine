@@ -19,7 +19,7 @@ if [[ $tag = $expectedTag ]]
 then
     kubectl delete job $STAGE-xrengine-testbot
 
-    helm upgrade --reuse-values $STAGE xrengine2/xrengine-test
+    helm upgrade --reuse-values $STAGE xrengine/xrengine
 fi
 
 # Wait until correct image tag is used.
