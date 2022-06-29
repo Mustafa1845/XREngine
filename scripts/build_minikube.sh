@@ -275,5 +275,6 @@ DOCKER_BUILDKIT=1 docker build -t xrengine \
   --build-arg VITE_APP_LOCAL_USER_SEED_PHRASE="$VITE_APP_LOCAL_USER_SEED_PHRASE" \
   --build-arg VITE_APP_MAINNET_USER_SEED_PHRASE="$VITE_APP_MAINNET_USER_SEED_PHRASE" .
   
+  
 
 DOCKER_BUILDKIT=1 docker build -t xrengine-testbot -f ./dockerfiles/testbot/Dockerfile-testbot .
