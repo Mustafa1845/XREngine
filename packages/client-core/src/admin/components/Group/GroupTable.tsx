@@ -3,24 +3,22 @@ import { useTranslation } from 'react-i18next'
 
 import { Group } from '@xrengine/common/src/interfaces/Group'
 
-import Box from '@mui/material/Box'
-
 import { useAuthState } from '../../../user/services/AuthService'
 import ConfirmModal from '../../common/ConfirmModal'
 import TableComponent from '../../common/Table'
 import { columns, Data } from '../../common/variables/group'
-import { AdminGroupService, GROUP_PAGE_LIMIT, useAdminGroupState } from '../../services/GroupService'
+import { GROUP_PAGE_LIMIT, GroupService, useGroupState } from '../../services/GroupService'
 import styles from '../../styles/admin.module.scss'
-import GroupDrawer, { GroupDrawerMode } from './GroupDrawer'
+import ViewGroup from './ViewGroup'
 
 interface Props {
-  className?: string
   search: string
 }
 
-const GroupTable = ({ className, search }: Props) => {
+const GroupTable = (props: Props) => {
+  const { search } = props
   const user = useAuthState().user
-  const [openGroupDrawer, setOpenGroupDrawer] = useState(false)
+  const [viewModal, setViewModal] = useState(false)
   const [singleGroup, setSingleGroup] = useState<Group>(null!)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(GROUP_PAGE_LIMIT)
@@ -29,20 +27,20 @@ const GroupTable = ({ className, search }: Props) => {
   const [orderBy, setOrderBy] = useState('asc')
   const [sortField, setSortField] = useState('name')
   const [showWarning, setShowWarning] = useState(false)
-  const adminGroupState = useAdminGroupState()
+  const adminGroupState = useGroupState()
   const adminGroups = adminGroupState.group
   const adminGroupCount = adminGroupState.total.value
   const { t } = useTranslation()
 
   const handlePageChange = (event: unknown, newPage: number) => {
     // const incDec = page < newPage ? 'increment' : 'decrement'
-    AdminGroupService.getGroupService(search, newPage, sortField, orderBy)
+    GroupService.getGroupService(search, newPage, sortField, orderBy)
     setPage(newPage)
   }
 
   useEffect(() => {
     if (adminGroupState.fetched.value) {
-      AdminGroupService.getGroupService(search, page, sortField, orderBy)
+      GroupService.getGroupService(search, page, sortField, orderBy)
     }
   }, [orderBy])
 
@@ -51,11 +49,11 @@ const GroupTable = ({ className, search }: Props) => {
     setPage(0)
   }
 
-  const handleGroupDrawer = (id: string) => {
+  const handleViewGroup = (id: string) => {
     const group = adminGroups.value.find((group) => group.id === id)
     if (group !== null) {
       setSingleGroup(group!)
-      setOpenGroupDrawer(true)
+      setViewModal(true)
     }
   }
 
@@ -70,14 +68,18 @@ const GroupTable = ({ className, search }: Props) => {
 
   const deleteGroupHandler = () => {
     setShowWarning(false)
-    AdminGroupService.deleteGroupByAdmin(groupId)
+    GroupService.deleteGroupByAdmin(groupId)
+  }
+
+  const closeViewModal = (open) => {
+    setViewModal(open)
   }
 
   useEffect(() => {
     //if (adminGroupState.updateNeeded.value && user.id.value) {
     //  GroupService.getGroupService(null)
     // } else {
-    AdminGroupService.getGroupService(search, 0, sortField, orderBy)
+    GroupService.getGroupService(search, 0, sortField, orderBy)
     // }
   }, [adminGroupState.updateNeeded.value, user, search])
 
@@ -88,11 +90,11 @@ const GroupTable = ({ className, search }: Props) => {
       description,
       action: (
         <>
-          <a href="#" className={styles.actionStyle} onClick={() => handleGroupDrawer(id)}>
+          <a href="#h" className={styles.actionStyle} onClick={() => handleViewGroup(id)}>
             <span className={styles.spanWhite}>{t('admin:components.group.view')}</span>
           </a>
           <a
-            href="#"
+            href="#h"
             className={styles.actionStyle}
             onClick={() => {
               handleShowWarning(id)
@@ -111,7 +113,7 @@ const GroupTable = ({ className, search }: Props) => {
   })
 
   return (
-    <Box className={className}>
+    <React.Fragment>
       <TableComponent
         allowSort={false}
         fieldOrder={orderBy}
@@ -126,20 +128,16 @@ const GroupTable = ({ className, search }: Props) => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       <ConfirmModal
-        open={showWarning}
-        description={`${t('admin:components.group.confirmGroupDelete')} '${groupName}'?`}
-        onClose={handleCloseWarning}
-        onSubmit={deleteGroupHandler}
+        popConfirmOpen={showWarning}
+        handleCloseModal={handleCloseWarning}
+        submit={deleteGroupHandler}
+        name={groupName}
+        label={'group'}
       />
-      {singleGroup && openGroupDrawer && (
-        <GroupDrawer
-          open
-          selectedGroup={singleGroup}
-          mode={GroupDrawerMode.ViewEdit}
-          onClose={() => setOpenGroupDrawer(false)}
-        />
+      {singleGroup && viewModal && (
+        <ViewGroup groupAdmin={singleGroup} openView={viewModal} closeViewModal={closeViewModal} />
       )}
-    </Box>
+    </React.Fragment>
   )
 }
 

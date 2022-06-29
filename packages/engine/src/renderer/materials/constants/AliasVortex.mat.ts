@@ -1,8 +1,6 @@
 import { ShaderMaterial, Texture } from 'three'
 
-import { DudTexture, MaterialParms } from '../MaterialParms'
-import { extractDefaults } from '../Utilities'
-import { TextureArg, Vec3Arg } from './DefaultArgs'
+import { MaterialParms } from '../MaterialParms'
 
 export const vertexShader = `
 varying vec2 vUv;
@@ -33,7 +31,7 @@ const fragmentShader = `
 
 #define MIN_CELLSIZE 2.
 #define CELLSIZE_RANGE 1.
-#define NUM_MARCH_ITERS 32
+#define NUM_MARCH_ITERS 120
 
 uniform vec3 iResolution;
 uniform sampler2D iChannel0;
@@ -426,23 +424,17 @@ void main()
 }
 `
 
-export const DefaultArgs = {
-  iTime: { hide: true, default: 0 },
-  iResolution: Vec3Arg,
-  iChannel0: TextureArg
-}
-
-export default function AliasVortex(args?: {
+export default async function AliasVortex(args?: {
   iTime?: number
   iResolution?: number[]
   iChannel0?: Texture
-}): MaterialParms {
-  const defaultArgs = extractDefaults(DefaultArgs)
+}): Promise<MaterialParms> {
+  const img = new Texture()
   const mat = new ShaderMaterial({
     uniforms: {
-      iChannel0: { value: args?.iChannel0 ?? null },
-      iTime: { value: args?.iTime ?? defaultArgs.iTime },
-      iResolution: { value: args?.iResolution ?? defaultArgs.iResolution }
+      iChannel0: { value: args?.iChannel0 ?? img },
+      iTime: { value: args?.iTime ?? 0.0 },
+      iResolution: { value: args?.iResolution ?? [window.innerWidth * 2, window.innerHeight * 2, 1] }
     },
     vertexShader: vertexShader,
     fragmentShader: fragmentShader

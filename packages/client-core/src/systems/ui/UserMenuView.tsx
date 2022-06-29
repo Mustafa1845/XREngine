@@ -6,11 +6,10 @@ import { UserId } from '@xrengine/common/src/interfaces/UserId'
 import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { createXRUI } from '@xrengine/engine/src/xrui/functions/createXRUI'
 import { useXRUIState } from '@xrengine/engine/src/xrui/functions/useXRUIState'
-import { addActionReceptor, removeActionReceptor } from '@xrengine/hyperflux'
 
 import Button from '@mui/material/Button'
 
-import { PartyService, PartyServiceReceptor } from '../../social/services/PartyService'
+import { PartyService } from '../../social/services/PartyService'
 import { getAvatarURLForUser } from '../../user/components/UserMenu/util'
 import { useAuthState } from '../../user/services/AuthService'
 import { UserService, useUserState } from '../../user/services/UserService'
@@ -87,20 +86,15 @@ const styles = {
 }
 
 export function createAvatarContextMenuView() {
-  return createXRUI(
-    AvatarContextMenu,
-    createState({
-      id: '' as UserId
-    })
-  )
+  return createXRUI(AvatarContextMenu, UserMenuState)
 }
 
-interface UserMenuState {
-  id: UserId
-}
+export const UserMenuState = createState({
+  id: '' as UserId
+})
 
 const AvatarContextMenu = () => {
-  const detailState = useXRUIState<UserMenuState>()
+  const detailState = useXRUIState() as typeof UserMenuState
 
   const engineState = useEngineState()
   const userState = useUserState()
@@ -108,15 +102,6 @@ const AvatarContextMenu = () => {
   const authState = useAuthState()
   const user = userState.layerUsers.find((user) => user.id.value === detailState.id.value)
   const { t } = useTranslation()
-
-  // TODO: move these to widget register
-  PartyService.useAPIListeners()
-  useEffect(() => {
-    addActionReceptor(PartyServiceReceptor)
-    return () => {
-      removeActionReceptor(PartyServiceReceptor)
-    }
-  }, [])
 
   const blockUser = () => {
     if (authState.user?.id?.value !== null && user) {

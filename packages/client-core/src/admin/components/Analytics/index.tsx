@@ -9,8 +9,8 @@ import MobileDateTimePicker from '@mui/lab/MobileDateTimePicker'
 import { Box, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material'
 
 import { useAuthState } from '../../../user/services/AuthService'
-import { useAdminAnalyticsState } from '../../services/AnalyticsService'
-import { ADminAnalyticsService } from '../../services/AnalyticsService'
+import { useAnalyticsState } from '../../services/AnalyticsService'
+import { AnalyticsService } from '../../services/AnalyticsService'
 import styles from '../../styles/admin.module.scss'
 import ActivityGraph from './ActivityGraph'
 import Card from './CardNumber'
@@ -19,6 +19,8 @@ import './index.scss'
 
 import UserGraph from './UserGraph'
 
+interface Props {}
+
 /**
  * Function for analytics on admin dashboard
  *
@@ -26,11 +28,11 @@ import UserGraph from './UserGraph'
  * @author Kevin KIMENYI <kimenyikevin@gmail.com>
  */
 
-const Analytics = () => {
+const Analytics = (props: Props) => {
   const [refetch, setRefetch] = useState(false)
   const { t } = useTranslation()
   const [graphSelector, setGraphSelector] = useState('activity')
-  const analyticsState = useAdminAnalyticsState()
+  const analyticsState = useAnalyticsState()
 
   const [endDate, setEndDate] = useState(moment())
   const [startDate, setStartDate] = useState(moment().subtract(30, 'days'))
@@ -100,14 +102,14 @@ const Analytics = () => {
 
   useEffect(() => {
     if (refetch === true && startDate < endDate) {
-      ADminAnalyticsService.fetchActiveParties(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchInstanceUsers(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchChannelUsers(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchActiveLocations(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchActiveScenes(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchActiveInstances(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchDailyUsers(startDate?.toDate(), endDate?.toDate())
-      ADminAnalyticsService.fetchDailyNewUsers(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchActiveParties(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchInstanceUsers(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchChannelUsers(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchActiveLocations(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchActiveScenes(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchActiveInstances(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchDailyUsers(startDate?.toDate(), endDate?.toDate())
+      AnalyticsService.fetchDailyNewUsers(startDate?.toDate(), endDate?.toDate())
       setRefetch(false)
     }
   }, [refetch, startDate, endDate])

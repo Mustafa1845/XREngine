@@ -5,10 +5,10 @@ export default {
     all: [],
     find: [],
     get: [],
-    create: [disallow('external')],
+    create: [],
     update: [disallow()],
     patch: [disallow()],
-    remove: [disallow('external')]
+    remove: []
   },
 
   after: {

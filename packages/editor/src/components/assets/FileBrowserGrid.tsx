@@ -3,6 +3,8 @@ import { useDrag, useDrop } from 'react-dnd'
 import { getEmptyImage } from 'react-dnd-html5-backend'
 import { useTranslation } from 'react-i18next'
 
+import { AssetLoader } from '@xrengine/engine/src/assets/classes/AssetLoader'
+import { AssetType } from '@xrengine/engine/src/assets/enum/AssetType'
 import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { TransformComponent } from '@xrengine/engine/src/transform/components/TransformComponent'
 
@@ -72,25 +74,26 @@ type FileBrowserItemType = {
   contextMenuId: string
   item: FileDataType
   currentContent: MutableRefObject<{ item: FileDataType; isCopy: boolean }>
-  setFileProperties: any
-  setOpenPropertiesModal: any
   deleteContent: (contentPath: string, type: string) => void
   onClick: (params: FileDataType) => void
+  setFileProperties: any
+  setOpenPropertiesModal: any
   dropItemsOnPanel: (data: any, dropOn?: FileDataType) => void
   moveContent: (oldName: string, newName: string, oldPath: string, newPath: string, isCopy?: boolean) => Promise<void>
 }
 
-export function FileBrowserItem({
-  contextMenuId,
-  item,
-  currentContent,
-  setOpenPropertiesModal,
-  setFileProperties,
-  deleteContent,
-  onClick,
-  dropItemsOnPanel,
-  moveContent
-}: FileBrowserItemType) {
+export function FileBrowserItem(props: FileBrowserItemType) {
+  const {
+    contextMenuId,
+    item,
+    currentContent,
+    deleteContent,
+    onClick,
+    moveContent,
+    setOpenPropertiesModal,
+    setFileProperties,
+    dropItemsOnPanel
+  } = props
   const { t } = useTranslation()
   const [renamingAsset, setRenamingAsset] = useState(false)
 

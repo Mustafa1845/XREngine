@@ -1,4 +1,4 @@
-import { disallow, iff, isProvider } from 'feathers-hooks-common'
+import { iff, isProvider } from 'feathers-hooks-common'
 
 import authenticate from '../../hooks/authenticate'
 import verifyScope from '../../hooks/verify-scope'
@@ -6,12 +6,12 @@ import verifyScope from '../../hooks/verify-scope'
 export default {
   before: {
     all: [authenticate()],
-    find: [disallow()],
-    get: [disallow()],
-    create: [iff(isProvider('external'), verifyScope('editor', 'write') as any)],
-    update: [disallow() /*verifyScope('editor', 'write')*/],
-    patch: [disallow() /*verifyScope('editor', 'write')*/],
-    remove: [disallow() /*verifyScope('editor', 'write')*/]
+    find: [],
+    get: [],
+    create: [authenticate(), verifyScope('editor', 'write')],
+    update: [authenticate(), verifyScope('editor', 'write')],
+    patch: [authenticate(), verifyScope('editor', 'write')],
+    remove: [authenticate(), verifyScope('editor', 'write')]
   },
 
   after: {

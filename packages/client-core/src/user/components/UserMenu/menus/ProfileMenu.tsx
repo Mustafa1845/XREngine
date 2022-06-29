@@ -20,7 +20,7 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 
-import { AuthSettingsService, useAuthSettingState } from '../../../../admin/services/Setting/AuthSettingService'
+import { AuthSettingService, useAdminAuthSettingState } from '../../../../admin/services/Setting/AuthSettingService'
 import { DiscordIcon } from '../../../../common/components/Icons/DiscordIcon'
 import { FacebookIcon } from '../../../../common/components/Icons/FacebookIcon'
 import { GoogleIcon } from '../../../../common/components/Icons/GoogleIcon'
@@ -32,13 +32,13 @@ import styles from '../index.module.scss'
 import { getAvatarURLForUser, Views } from '../util'
 
 interface Props {
-  className?: string
-  hideLogin?: boolean
   changeActiveMenu?: (type: string | null) => void
   setProfileMenuOpen?: (open: boolean) => void
+  className?: string
+  hideLogin?: boolean
 }
 
-const initialAuthState = {
+const initialState = {
   jwt: true,
   local: false,
   discord: false,
@@ -49,15 +49,6 @@ const initialAuthState = {
   twitter: false,
   smsMagicLink: false,
   emailMagicLink: false
-}
-
-const initialOAuthConnectedState = {
-  discord: false,
-  facebook: false,
-  github: false,
-  google: false,
-  linkedin: false,
-  twitter: false
 }
 
 export const MaterialUISwitch = styled(Switch)(({ theme }) => ({
@@ -108,7 +99,8 @@ export const MaterialUISwitch = styled(Switch)(({ theme }) => ({
   }
 }))
 
-const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpen }: Props): JSX.Element => {
+const ProfileMenu = (props: Props): JSX.Element => {
+  const { changeActiveMenu, setProfileMenuOpen, hideLogin } = props
   const { t } = useTranslation()
   const location = useLocation()
 
@@ -120,19 +112,22 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
   const [errorUsername, setErrorUsername] = useState(false)
   const [showUserId, setShowUserId] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
-  const authSettingState = useAuthSettingState()
+  const authSettingState = useAdminAuthSettingState()
   const [authSetting] = authSettingState?.authSettings?.value || []
-  const [authState, setAuthState] = useState(initialAuthState)
+  const [authState, setAuthState] = useState(initialState)
   const loading = useAuthState().isProcessing.value
   const userSettings = selfUser.user_setting.value
   const userId = selfUser.id.value
   const apiKey = selfUser.apiKey?.token?.value
   const userRole = selfUser.userRole.value
-  const [oauthConnectedState, setOauthConnectedState] = useState(initialOAuthConnectedState)
+
+  useEffect(() => {
+    !authSetting && AuthSettingService.fetchAuthSetting()
+  }, [])
 
   useEffect(() => {
     if (authSetting) {
-      let temp = { ...initialAuthState }
+      let temp = { ...initialState }
       authSetting?.authStrategies?.forEach((el) => {
         Object.entries(el).forEach(([strategyName, strategy]) => {
           temp[strategyName] = strategy
@@ -148,21 +143,6 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
   }
 
   let type = ''
-  const addMoreSocial =
-    (authState?.discord && !oauthConnectedState.discord) ||
-    (authState.facebook && !oauthConnectedState.facebook) ||
-    (authState.github && !oauthConnectedState.github) ||
-    (authState.google && !oauthConnectedState.google) ||
-    (authState.linkedin && !oauthConnectedState.linkedin) ||
-    (authState.twitter && !oauthConnectedState.twitter)
-
-  const removeSocial =
-    (authState?.discord && oauthConnectedState.discord) ||
-    (authState.facebook && oauthConnectedState.facebook) ||
-    (authState.github && oauthConnectedState.github) ||
-    (authState.google && oauthConnectedState.google) ||
-    (authState.linkedin && oauthConnectedState.linkedin) ||
-    (authState.twitter && oauthConnectedState.twitter)
 
   const loadCredentialHandler = async () => {
     try {
@@ -180,49 +160,6 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
   useEffect(() => {
     loadCredentialHandler()
   }, []) // Only run once
-
-  useEffect(() => {
-    selfUser && setUsername(selfUser.name.value)
-  }, [selfUser.name.value])
-
-  useEffect(() => {
-    setOauthConnectedState(initialOAuthConnectedState)
-    if (selfUser.identityProviders.value)
-      for (let ip of selfUser.identityProviders.value) {
-        switch (ip.type) {
-          case 'discord':
-            setOauthConnectedState((oauthConnectedState) => {
-              return { ...oauthConnectedState, discord: true }
-            })
-            break
-          case 'facebook':
-            setOauthConnectedState((oauthConnectedState) => {
-              return { ...oauthConnectedState, facebook: true }
-            })
-            break
-          case 'linkedin':
-            setOauthConnectedState((oauthConnectedState) => {
-              return { ...oauthConnectedState, linkedin: true }
-            })
-            break
-          case 'google':
-            setOauthConnectedState((oauthConnectedState) => {
-              return { ...oauthConnectedState, google: true }
-            })
-            break
-          case 'twitter':
-            setOauthConnectedState((oauthConnectedState) => {
-              return { ...oauthConnectedState, twitter: true }
-            })
-            break
-          case 'github':
-            setOauthConnectedState((oauthConnectedState) => {
-              return { ...oauthConnectedState, github: true }
-            })
-            break
-        }
-      }
-  }, [selfUser.identityProviders])
 
   const updateUserName = (e) => {
     e.preventDefault()
@@ -267,10 +204,6 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
 
   const handleOAuthServiceClick = (e) => {
     AuthService.loginUserByOAuth(e.currentTarget.id, location)
-  }
-
-  const handleRemoveOAuthServiceClick = (e) => {
-    AuthService.removeUserOAuth(e.currentTarget.id)
   }
 
   const handleLogout = async (e) => {
@@ -365,7 +298,7 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
   const enableConnect = authState?.emailMagicLink || authState?.smsMagicLink
 
   return (
-    <div className={styles.menuPanel + (className ? ' ' + className : '')}>
+    <div className={styles.menuPanel + (props.className ? ' ' + props.className : '')}>
       <section className={styles.profilePanel}>
         <section className={styles.profileBlock}>
           <div className={styles.avatarBlock}>
@@ -413,28 +346,22 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
             <Grid container justifyContent="right" className={styles.justify}>
               <Grid item xs={userRole === 'guest' ? 6 : 4}>
                 <h2>
-                  {userRole === 'admin' ? t('user:usermenu.profile.youAreAn') : t('user:usermenu.profile.youAreA')}
-                  <span id="user-role">{` ${userRole}`}</span>.
+                  {userRole === 'admin' ? t('user:usermenu.profile.youAreAn') : t('user:usermenu.profile.youAreA')}{' '}
+                  <span id="user-role">{userRole}</span>.
                 </h2>
               </Grid>
               <Grid item container xs={userRole === 'guest' ? 6 : 4} alignItems="flex-start" direction="column">
-                <Tooltip
-                  title={showUserId ? t('user:usermenu.profile.hideUserId') : t('user:usermenu.profile.showUserId')}
-                  placement="right"
-                >
+                <Tooltip title="Show User ID" placement="right">
                   <h2 className={styles.showUserId} id="show-user-id" onClick={() => setShowUserId(!showUserId)}>
-                    {showUserId ? t('user:usermenu.profile.hideUserId') : t('user:usermenu.profile.showUserId')}
+                    {showUserId ? t('user:usermenu.profile.hideUserId') : t('user:usermenu.profile.showUserId')}{' '}
                   </h2>
                 </Tooltip>
               </Grid>
               {selfUser?.apiKey?.id && (
                 <Grid item container xs={4} alignItems="flex-start" direction="column">
-                  <Tooltip
-                    title={showApiKey ? t('user:usermenu.profile.hideApiKey') : t('user:usermenu.profile.showApiKey')}
-                    placement="right"
-                  >
+                  <Tooltip title="Show API key" placement="right">
                     <h2 className={styles.showUserId} onClick={() => setShowApiKey(!showApiKey)}>
-                      {showApiKey ? t('user:usermenu.profile.hideApiKey') : t('user:usermenu.profile.showApiKey')}
+                      {showApiKey ? t('user:usermenu.profile.hideApiKey') : t('user:usermenu.profile.showApiKey')}{' '}
                     </h2>
                   </Tooltip>
                 </Grid>
@@ -624,92 +551,46 @@ const ProfileMenu = ({ className, hideLogin, changeActiveMenu, setProfileMenuOpe
               </section>
             )}
 
-            {enableSocial && (
+            {userRole === 'guest' && enableSocial && (
               <section className={styles.socialBlock}>
-                {selfUser?.userRole.value === 'guest' && (
-                  <Typography variant="h3" className={styles.textBlock}>
-                    {t('user:usermenu.profile.connectSocial')}
-                  </Typography>
-                )}
-                {selfUser?.userRole.value !== 'guest' && addMoreSocial && (
-                  <Typography variant="h3" className={styles.textBlock}>
-                    {t('user:usermenu.profile.addSocial')}
-                  </Typography>
-                )}
+                <Typography variant="h3" className={styles.textBlock}>
+                  {t('user:usermenu.profile.connectSocial')}
+                </Typography>
                 <div className={styles.socialContainer}>
-                  {authState?.discord && !oauthConnectedState.discord && (
+                  {authState?.discord && (
                     <a href="#" id="discord" onClick={handleOAuthServiceClick}>
                       <DiscordIcon width="40" height="40" viewBox="0 0 40 40" />
                     </a>
                   )}
-                  {authState?.google && !oauthConnectedState.google && (
+                  {authState?.google && (
                     <a href="#" id="google" onClick={handleOAuthServiceClick}>
                       <GoogleIcon width="40" height="40" viewBox="0 0 40 40" />
                     </a>
                   )}
-                  {authState?.facebook && !oauthConnectedState.facebook && (
+                  {authState?.facebook && (
                     <a href="#" id="facebook" onClick={handleOAuthServiceClick}>
                       <FacebookIcon width="40" height="40" viewBox="0 0 40 40" />
                     </a>
                   )}
-                  {authState?.linkedin && !oauthConnectedState.linkedin && (
+                  {authState?.linkedin && (
                     <a href="#" id="linkedin" onClick={handleOAuthServiceClick}>
                       <LinkedInIcon width="40" height="40" viewBox="0 0 40 40" />
                     </a>
                   )}
-                  {authState?.twitter && !oauthConnectedState.twitter && (
+                  {authState?.twitter && (
                     <a href="#" id="twitter" onClick={handleOAuthServiceClick}>
                       <TwitterIcon width="40" height="40" viewBox="0 0 40 40" />
                     </a>
                   )}
-                  {authState?.github && !oauthConnectedState.github && (
+                  {authState?.github && (
                     <a href="#" id="github" onClick={handleOAuthServiceClick}>
                       <GitHub />
                     </a>
                   )}
                 </div>
-                {selfUser?.userRole.value !== 'guest' && removeSocial && (
-                  <Typography variant="h3" className={styles.textBlock}>
-                    {t('user:usermenu.profile.removeSocial')}
-                  </Typography>
-                )}
-                <div className={styles.socialContainer}>
-                  {authState?.discord && oauthConnectedState.discord && (
-                    <a href="#" id="discord" onClick={handleRemoveOAuthServiceClick}>
-                      <DiscordIcon width="40" height="40" viewBox="0 0 40 40" />
-                    </a>
-                  )}
-                  {authState?.google && oauthConnectedState.google && (
-                    <a href="#" id="google" onClick={handleRemoveOAuthServiceClick}>
-                      <GoogleIcon width="40" height="40" viewBox="0 0 40 40" />
-                    </a>
-                  )}
-                  {authState?.facebook && oauthConnectedState.facebook && (
-                    <a href="#" id="facebook" onClick={handleRemoveOAuthServiceClick}>
-                      <FacebookIcon width="40" height="40" viewBox="0 0 40 40" />
-                    </a>
-                  )}
-                  {authState?.linkedin && oauthConnectedState.linkedin && (
-                    <a href="#" id="linkedin" onClick={handleRemoveOAuthServiceClick}>
-                      <LinkedInIcon width="40" height="40" viewBox="0 0 40 40" />
-                    </a>
-                  )}
-                  {authState?.twitter && oauthConnectedState.twitter && (
-                    <a href="#" id="twitter" onClick={handleRemoveOAuthServiceClick}>
-                      <TwitterIcon width="40" height="40" viewBox="0 0 40 40" />
-                    </a>
-                  )}
-                  {authState?.github && oauthConnectedState.github && (
-                    <a href="#" id="github" onClick={handleRemoveOAuthServiceClick}>
-                      <GitHub />
-                    </a>
-                  )}
-                </div>
-                {selfUser?.userRole.value === 'guest' && (
-                  <Typography variant="h4" className={styles.smallTextBlock}>
-                    {t('user:usermenu.profile.createOne')}
-                  </Typography>
-                )}
+                <Typography variant="h4" className={styles.smallTextBlock}>
+                  {t('user:usermenu.profile.createOne')}
+                </Typography>
               </section>
             )}
             {setProfileMenuOpen != null && (

@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { TwitterCallback } from '@xrengine/client-core/src/user/components/Oauth/TwitterCallback'
+import { TwitterCallback } from '@xrengine/client-core/src/user/components/Oauth/Twitter'
 
 export const TwitterHomePage = () => <TwitterCallback />
 

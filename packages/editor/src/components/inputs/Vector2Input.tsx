@@ -21,16 +21,18 @@ interface Vector2InputProp {
  *
  * @author Robert Long
  */
-export const Vector2Input = ({ value, onChange, uniformScaling, hideLabels, ...rest }: Vector2InputProp) => {
+export const Vector2Input = (props: Vector2InputProp) => {
   const id = uniqueId++
   const newValue = new Vector2()
-  const [uniformEnabled, setUniformEnabled] = useState(uniformScaling)
+  const [uniformEnabled, setUniformEnabled] = useState(props.uniformScaling)
 
   const onToggleUniform = () => {
     setUniformEnabled(!uniformEnabled)
   }
 
-  const processChange = (field, fieldValue) => {
+  const onChange = (field, fieldValue) => {
+    const { value, onChange } = props
+
     if (uniformEnabled) {
       newValue.set(fieldValue, fieldValue)
     } else {
@@ -46,10 +48,11 @@ export const Vector2Input = ({ value, onChange, uniformScaling, hideLabels, ...r
     }
   }
 
-  const onChangeX = (x) => processChange('x', x)
+  const onChangeX = (x) => onChange('x', x)
 
-  const onChangeY = (y) => processChange('y', y)
+  const onChangeY = (y) => onChange('y', y)
 
+  const { uniformScaling, value, ...rest } = props
   const vx = value ? value.x : 0
   const vy = value ? value.y : 0
   const checkboxId = 'uniform-button-' + id
@@ -61,7 +64,7 @@ export const Vector2Input = ({ value, onChange, uniformScaling, hideLabels, ...r
         value={vx}
         onChange={onChangeX}
         prefix={
-          hideLabels ? null : (
+          props.hideLabels ? null : (
             <Vector3Scrubber {...rest} tag="div" value={vx} onChange={onChangeX} axis="x">
               X
             </Vector3Scrubber>
@@ -73,7 +76,7 @@ export const Vector2Input = ({ value, onChange, uniformScaling, hideLabels, ...r
         value={vy}
         onChange={onChangeY}
         prefix={
-          hideLabels ? null : (
+          props.hideLabels ? null : (
             <Vector3Scrubber {...rest} tag="div" value={vy} onChange={onChangeY} axis="y">
               Y
             </Vector3Scrubber>

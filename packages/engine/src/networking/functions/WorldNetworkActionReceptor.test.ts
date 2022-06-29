@@ -22,84 +22,75 @@ describe('WorldNetworkActionReceptors', () => {
     createMockNetwork()
   })
 
-  describe('addPeers', () => {
-    it('should add peer', () => {
+  describe('addClient', () => {
+    it('should add client', () => {
       const world = Engine.instance.currentWorld
       const userId = 'user id' as UserId
       const userName = 'user name'
       const userIndex = 1
-      const network = world.worldNetwork
-
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: userName, index: userIndex, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: userName, index: userIndex }),
         world
       )
 
-      assert(network.peers.get(userId))
-      assert.equal(network.peers.get(userId)?.userId, userId)
-      assert.equal(network.peers.get(userId)?.index, userIndex)
-      assert.equal(world.users.get(userId)?.name, userName)
-      assert.equal(world.users.get(userId)?.userId, userId)
-      assert.equal(network.userIndexToUserId.get(userIndex), userId)
-      assert.equal(network.userIdToUserIndex.get(userId), userIndex)
+      assert(world.clients.get(userId))
+      assert.equal(world.clients.get(userId)?.userId, userId)
+      assert.equal(world.clients.get(userId)?.index, userIndex)
+      assert.equal(world.clients.get(userId)?.name, userName)
+      assert.equal(world.userIndexToUserId.get(userIndex), userId)
+      assert.equal(world.userIdToUserIndex.get(userId), userIndex)
     })
 
-    it('should not add peer if already exists', () => {
+    it('should not add client if already exists', () => {
       const world = Engine.instance.currentWorld
       const userId = 'user id' as UserId
       const userName = 'user name'
       const userName2 = 'user name 2'
       const userIndex = 1
-      const network = world.worldNetwork
 
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: userName, index: userIndex, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: userName, index: userIndex }),
         world
       )
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: userName2, index: userIndex, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: userName2, index: userIndex }),
         world
       )
 
-      assert.equal(network.peers.get(userId)?.userId, userId)
-      assert.equal(world.users.get(userId)?.name, userName)
+      assert(world.clients.get(userId)?.name, userName)
     })
   })
 
-  describe('removePeer', () => {
-    it('should remove peer', () => {
+  describe('removeClient', () => {
+    it('should remove client', () => {
       const world = Engine.instance.currentWorld
       const userId = 'user id' as UserId
       const userName = 'user name'
       const userIndex = 1
-      const network = world.worldNetwork
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: userName, index: userIndex, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: userName, index: userIndex }),
         world
       )
 
-      WorldNetworkActionReceptor.receiveDestroyPeers(
-        WorldNetworkAction.destroyPeer({ $from: userId, $topic: network.hostId }),
-        false,
-        world
-      )
+      WorldNetworkActionReceptor.receiveDestroyClient(WorldNetworkAction.destroyClient({ $from: userId }), false, world)
 
-      assert(!world.users.get(userId))
-      assert(!network.peers.get(userId))
-      assert(!network.userIndexToUserId.get(userIndex))
-      assert(!network.userIdToUserIndex.get(userId))
+      assert(!world.clients.get(userId))
+      assert(!world.userIndexToUserId.get(userIndex))
+      assert(!world.userIdToUserIndex.get(userId))
     })
 
-    it('should remove peer and owned network objects', () => {
+    it('should remove client and owned network objects', () => {
       const world = Engine.instance.currentWorld
       const userId = 'user id' as UserId
       const userName = 'user name'
       const userIndex = 1
-      const network = world.worldNetwork
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: userName, index: userIndex, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: userName, index: userIndex }),
         world
       )
+
+      const topic = 'network'
+
       const networkId = 2 as NetworkId
 
       const entity = createEntity()
@@ -112,20 +103,15 @@ describe('WorldNetworkActionReceptors', () => {
 
       // process remove actions and execute entity removal
       Engine.instance.store.defaultDispatchDelay = 0
-      WorldNetworkActionReceptor.receiveDestroyPeers(
-        WorldNetworkAction.destroyPeer({ $from: userId, $topic: network.hostId }),
-        true,
-        world
-      )
+      WorldNetworkActionReceptor.receiveDestroyClient(WorldNetworkAction.destroyClient({ $from: userId }), true, world)
 
       ActionFunctions.clearOutgoingActions()
       ActionFunctions.applyIncomingActions()
       world.execute(0)
 
-      assert(!world.users.get(userId))
-      assert(!network.peers.get(userId))
-      assert(!network.userIndexToUserId.get(1))
-      assert(!network.userIdToUserIndex.get(userId))
+      assert(!world.clients.get(userId))
+      assert(!world.userIndexToUserId.get(1))
+      assert(!world.userIdToUserIndex.get(userId))
 
       assert(!world.getNetworkObject(userId, networkId))
     })
@@ -138,14 +124,13 @@ describe('WorldNetworkActionReceptors', () => {
 
       Engine.instance.userId = userId
       const world = Engine.instance.currentWorld
-      const network = world.worldNetwork
 
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: hostUserId, name: 'host', index: 0, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: hostUserId, name: 'host', index: 0 }),
         world
       )
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: 'user name', index: 1, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: 'user name', index: 1 }),
         world
       )
 
@@ -158,8 +143,7 @@ describe('WorldNetworkActionReceptors', () => {
           $from: world.worldNetwork.hostId, // from  host
           prefab: objPrefab, // generic prefab
           parameters: objParams, // arbitrary
-          networkId: objNetId,
-          $topic: network.hostId
+          networkId: objNetId
         }),
         world
       )
@@ -187,14 +171,13 @@ describe('WorldNetworkActionReceptors', () => {
       Engine.instance.userId = userId
 
       const world = Engine.instance.currentWorld
-      const network = world.worldNetwork
 
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: hostId, name: 'world', index: 0, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: hostId, name: 'world', index: 0 }),
         world
       )
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: 'user name', index: 1, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: 'user name', index: 1 }),
         world
       )
 
@@ -235,18 +218,17 @@ describe('WorldNetworkActionReceptors', () => {
 
       Engine.instance.userId = userId
       const world = Engine.instance.currentWorld
-      const network = world.worldNetwork
 
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: hostUserId, name: 'world', index: 0, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: hostUserId, name: 'world', index: 0 }),
         world
       )
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: 'user name', index: 1, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: 'user name', index: 1 }),
         world
       )
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId2, name: 'second user name', index: 2, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId2, name: 'second user name', index: 2 }),
         world
       )
 
@@ -262,8 +244,7 @@ describe('WorldNetworkActionReceptors', () => {
           $from: userId2, // from other user
           prefab: objPrefab, // generic prefab
           parameters: objParams, // arbitrary
-          networkId: objNetId,
-          $topic: network.hostId
+          networkId: objNetId
         }),
         world
       )
@@ -289,11 +270,10 @@ describe('WorldNetworkActionReceptors', () => {
 
       Engine.instance.userId = userId
       const world = Engine.instance.currentWorld
-      const network = world.worldNetwork
       world.localClientEntity = createEntity(world)
 
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: 'user name', index: 1, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: 'user name', index: 1 }),
         world
       )
 
@@ -309,8 +289,7 @@ describe('WorldNetworkActionReceptors', () => {
           $from: userId, // from user
           prefab: objPrefab, // generic prefab
           parameters: objParams, // arbitrary
-          networkId: objNetId,
-          $topic: network.hostId
+          networkId: objNetId
         }),
         world
       )
@@ -333,16 +312,15 @@ describe('WorldNetworkActionReceptors', () => {
       // Run as host
       Engine.instance.userId = hostUserId
       const world = Engine.instance.currentWorld
-      const network = world.worldNetwork
 
       Engine.instance.store.defaultDispatchDelay = 0
 
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: hostUserId, name: 'world', index: 0, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: hostUserId, name: 'world', index: 0 }),
         world
       )
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: 'user name', index: 1, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: 'user name', index: 1 }),
         world
       )
 
@@ -355,8 +333,7 @@ describe('WorldNetworkActionReceptors', () => {
           $from: hostUserId, // from host
           prefab: objPrefab, // generic prefab
           parameters: objParams, // arbitrary
-          networkId: objNetId,
-          $topic: network.hostId
+          networkId: objNetId
         }),
         world
       )
@@ -377,8 +354,7 @@ describe('WorldNetworkActionReceptors', () => {
             ownerId: hostUserId,
             networkId: objNetId
           },
-          requester: userId,
-          $topic: network.hostId
+          requester: userId
         }),
         world
       )
@@ -408,20 +384,15 @@ describe('WorldNetworkActionReceptors', () => {
       Engine.instance.userId = userId
 
       const world = Engine.instance.currentWorld
-      const network = world.worldNetwork
-      WorldNetworkActionReceptor.receiveCreatePeers(
-        WorldNetworkAction.createPeer({ $from: userId, name: userName, index: userIndex, $topic: network.hostId }),
+      WorldNetworkActionReceptor.receiveCreateClient(
+        WorldNetworkAction.createClient({ $from: userId, name: userName, index: userIndex }),
         world
       )
 
       const hostIndex = 0
-      world.users.set(world.worldNetwork.hostId, {
+      world.clients.set(world.worldNetwork.hostId, {
         userId: world.worldNetwork.hostId,
-        name: 'world'
-      })
-
-      network.peers.set(world.worldNetwork.hostId, {
-        userId: world.worldNetwork.hostId,
+        name: 'world',
         index: hostIndex
       })
 
@@ -434,8 +405,7 @@ describe('WorldNetworkActionReceptors', () => {
           $from: world.worldNetwork.hostId, // from host
           prefab: objPrefab, // generic prefab
           parameters: objParams, // arbitrary
-          networkId: objNetId,
-          $topic: network.hostId
+          networkId: objNetId
         }),
         world
       )
@@ -457,8 +427,7 @@ describe('WorldNetworkActionReceptors', () => {
             ownerId: world.worldNetwork.hostId,
             networkId: objNetId
           },
-          requester: userId,
-          $topic: network.hostId
+          requester: userId
         }),
         world
       )

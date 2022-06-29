@@ -1,8 +1,6 @@
 import { VariantType } from 'notistack'
 
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, dispatchAction } from '@xrengine/hyperflux'
-
+import { useDispatch } from '../../store'
 import { defaultAction } from '../components/NotificationActions'
 
 export type NotificationOptions = {
@@ -16,14 +14,19 @@ export const NotificationActions = {
 
 export const NotificationService = {
   dispatchNotify(message: string, options: NotificationOptions) {
-    dispatchAction(NotificationAction.notify({ message, options }))
+    const dispatch = useDispatch()
+    dispatch(NotificationAction.notify(message, options))
   }
 }
 
-export class NotificationAction {
-  static notify = defineAction({
-    type: 'ENQUEUE_NOTIFICATION' as const,
-    message: matches.string,
-    options: matches.object as Validator<unknown, NotificationOptions>
-  })
+export const NotificationAction = {
+  notify: (message: string, options: NotificationOptions) => {
+    return {
+      type: 'ENQUEUE_NOTIFICATION' as const,
+      message,
+      options
+    }
+  }
 }
+
+export type NotificationActionType = ReturnType<typeof NotificationAction[keyof typeof NotificationAction]>

@@ -9,15 +9,17 @@ import FileBrowserContentPanel from '@xrengine/editor/src/components/assets/File
 import { DndWrapper } from '@xrengine/editor/src/components/dnd/DndWrapper'
 import { DockContainer } from '@xrengine/editor/src/components/EditorContainer'
 
-import DrawerView from '../../common/DrawerView'
+import Drawer from '@mui/material/Drawer'
+
+import styles from '../../styles/admin.module.scss'
 
 interface Props {
   name: string
   open: boolean
-  onClose: () => void
+  setShowProjectFiles: any
 }
 
-const ViewProjectFiles = ({ name, open, onClose }: Props) => {
+const ViewProjectFiles = (props: Props) => {
   const assetsPreviewPanelRef = React.useRef()
 
   const onLayoutChangedCallback = () => {
@@ -41,7 +43,7 @@ const ViewProjectFiles = ({ name, open, onClose }: Props) => {
                 {
                   id: 'filesPanel',
                   title: 'Project Files',
-                  content: <FileBrowserContentPanel selectedFile={name} onSelectionChanged={onSelectionChanged} />
+                  content: <FileBrowserContentPanel selectedFile={props.name} onSelectionChanged={onSelectionChanged} />
                 }
               ]
             }
@@ -57,7 +59,12 @@ const ViewProjectFiles = ({ name, open, onClose }: Props) => {
 
   return (
     <div id="project-container">
-      <DrawerView open={open} onClose={onClose}>
+      <Drawer
+        classes={{ paper: styles.paperDrawer }}
+        anchor="right"
+        open={props.open}
+        onClose={() => props.setShowProjectFiles(false)}
+      >
         <DndWrapper id="project-container">
           <DockContainer dividerAlpha={0.3}>
             <DockLayout
@@ -67,7 +74,7 @@ const ViewProjectFiles = ({ name, open, onClose }: Props) => {
             />
           </DockContainer>
         </DndWrapper>
-      </DrawerView>
+      </Drawer>
     </div>
   )
 }

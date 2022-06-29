@@ -9,8 +9,8 @@ interface SketchColorPickerProps {
   onChange: Function
 }
 
-const SketchColorPicker = ({ name, value, onChange }: SketchColorPickerProps) => {
-  const [color, setColor] = useState(value)
+const SketchColorPicker = (props: SketchColorPickerProps) => {
+  const [color, setColor] = useState(props.value)
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -22,26 +22,26 @@ const SketchColorPicker = ({ name, value, onChange }: SketchColorPickerProps) =>
   }
 
   useEffect(() => {
-    if (color !== value) {
-      setColor(value)
+    if (color !== props.value) {
+      setColor(props.value)
     }
-  }, [value])
+  }, [props.value])
 
   const handleChange = (color) => {
     const rgbaColor = `rgba(${color.rgb.r},${color.rgb.g},${color.rgb.b},${color.rgb.a})`
 
     setColor(rgbaColor)
-    onChange(rgbaColor)
+    props.onChange(rgbaColor)
   }
 
   const open = Boolean(anchorEl)
   const id = open ? 'simple-popover' : undefined
 
   return (
-    <div id={name}>
+    <div id={props.name}>
       <style>
         {`
-          #${name} .color {
+          #${props.name} .color {
             margin: 0px;
             width: 36px;
             height: 14px;
@@ -49,7 +49,7 @@ const SketchColorPicker = ({ name, value, onChange }: SketchColorPickerProps) =>
             background: ${color};
           }
 
-          #${name} .swatch {
+          #${props.name} .swatch {
             padding: 5px;
             width: 46px;
             min-width: 46px;

@@ -10,10 +10,6 @@
   background: var(--tableHeaderBackground) !important;
   color: var(--textColor) !important;
   border-bottom: 2px solid var(--mainBackground) !important;
-
-  span {
-    color: var(--textColor) !important;
-  }
 }
 
 .tableCellBody {
@@ -30,8 +26,4 @@
 
 .spanWhite {
   color: var(--textColor) !important;
-}
-
-.spanWhite:hover {
-  opacity: 0.8;
 }

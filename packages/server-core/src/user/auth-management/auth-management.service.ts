@@ -1,6 +1,7 @@
 import authManagement from 'feathers-authentication-management'
 
 import { Application } from '../../../declarations'
+import { Authmanagement } from './auth-management.class'
 import hooks from './auth-management.hooks'
 import notifier from './auth-management.notifier'
 

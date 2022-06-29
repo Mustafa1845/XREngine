@@ -31,6 +31,7 @@ export function fadeOutAnimationStateActions(state?: AnimationState, duration: n
 
 export function enterAnimationState(state: AnimationState, prevState?: AnimationState) {
   if (!state) return
+  console.log(getStateHandlers())
   const handler = getStateHandlers()[state.type]
   handler?.enter(state, prevState)
 }

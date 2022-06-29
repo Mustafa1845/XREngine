@@ -1,7 +1,9 @@
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
+import { createState, useState } from '@speigg/hookstate'
+
+import { dispatchAction } from '@xrengine/hyperflux'
 
 import { ClientStorage } from '../common/classes/ClientStorage'
+import { Engine } from '../ecs/classes/Engine'
 import { AudioSettingKeys } from './AudioSettingConstants'
 
 type AudioStateType = {
@@ -9,12 +11,9 @@ type AudioStateType = {
   microphone: number
 }
 
-const AudioState = defineState({
-  name: 'AudioState',
-  initial: () => ({
-    audio: 10,
-    microphone: 50
-  })
+const state = createState<AudioStateType>({
+  audio: 10,
+  microphone: 50
 })
 
 export async function restoreAudioSettings(): Promise<void> {
@@ -23,49 +22,62 @@ export async function restoreAudioSettings(): Promise<void> {
     const promises = [
       ClientStorage.get(AudioSettingKeys.AUDIO).then((v) => {
         if (typeof v !== 'undefined') s.audio = v as number
+        ClientStorage.set(AudioSettingKeys.AUDIO, state.audio.value)
       }),
       ClientStorage.get(AudioSettingKeys.MICROPHONE).then((v) => {
         if (typeof v !== 'undefined') s.microphone = v as number
+        ClientStorage.set(AudioSettingKeys.MICROPHONE, state.microphone.value)
       })
     ]
     await Promise.all(promises)
-    dispatchAction(AudioSettingAction.restoreStorageData({ state: s }))
+    dispatchAction(AudioSettingAction.restoreStorageData(s))
   }
 }
 
-export const accessAudioState = () => getState(AudioState)
-export const useAudioState = () => useState(accessAudioState())
+export const useAudioState = () => useState(state) as any as typeof state
+export const accessAudioState = () => state
 
-export function AudioSettingReceptor(action) {
-  getState(AudioState).batch((s) => {
-    matches(action)
-      .when(AudioSettingAction.setAudio.matches, (action) => {
+export function AudioSettingReceptor(action: AudioActionType) {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'AUDIO_VOLUME':
         s.merge({ audio: action.audio })
         ClientStorage.set(AudioSettingKeys.AUDIO, action.audio)
-      })
-      .when(AudioSettingAction.setMicrophone.matches, (action) => {
+        break
+      case 'MICROPHONE_VOLUME':
         s.merge({ microphone: action.microphone })
         ClientStorage.set(AudioSettingKeys.MICROPHONE, action.microphone)
-      })
-      .when(AudioSettingAction.restoreStorageData.matches, (action) => {
+        break
+      case 'RESTORE_AUDIO_STORAGE_DATA':
         s.merge(action.state)
-      })
+    }
+
+    return s
   })
 }
 
-export class AudioSettingAction {
-  static setAudio = defineAction({
-    type: 'AUDIO_VOLUME' as const,
-    audio: matches.number
-  })
-
-  static setMicrophone = defineAction({
-    type: 'MICROPHONE_VOLUME' as const,
-    microphone: matches.number
-  })
-
-  static restoreStorageData = defineAction({
-    type: 'RESTORE_AUDIO_STORAGE_DATA' as const,
-    state: matches.object as Validator<unknown, AudioStateType>
-  })
+export const AudioSettingAction = {
+  setAudio: (audio: number) => {
+    return {
+      store: 'ENGINE' as const,
+      type: 'AUDIO_VOLUME' as const,
+      audio
+    }
+  },
+  setMicrophone: (microphone: number) => {
+    return {
+      store: 'ENGINE' as const,
+      type: 'MICROPHONE_VOLUME' as const,
+      microphone
+    }
+  },
+  restoreStorageData: (state: AudioStateType) => {
+    return {
+      store: 'ENGINE' as const,
+      type: 'RESTORE_AUDIO_STORAGE_DATA' as const,
+      state
+    }
+  }
 }
+
+export type AudioActionType = ReturnType<typeof AudioSettingAction[keyof typeof AudioSettingAction]>

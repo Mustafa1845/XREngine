@@ -2,54 +2,59 @@ import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AvatarInterface } from '@xrengine/common/src/interfaces/AvatarInterface'
-import { dispatchAction } from '@xrengine/hyperflux'
 
-import Box from '@mui/material/Box'
+import Drawer from '@mui/material/Drawer'
 
+import { useDispatch } from '../../../store'
 import AvatarSelectMenu from '../../../user/components/UserMenu/menus/AvatarSelectMenu'
 import { useAuthState } from '../../../user/services/AuthService'
 import ConfirmModal from '../../common/ConfirmModal'
-import DrawerView from '../../common/DrawerView'
 import TableComponent from '../../common/Table'
 import { avatarColumns, AvatarData } from '../../common/variables/avatar'
-import { AdminAvatarActions, AVATAR_PAGE_LIMIT } from '../../services/AvatarService'
-import { useAdminAvatarState } from '../../services/AvatarService'
-import { AdminAvatarService } from '../../services/AvatarService'
+import { AVATAR_PAGE_LIMIT, AvatarAction } from '../../services/AvatarService'
+import { useAvatarState } from '../../services/AvatarService'
+import { AvatarService } from '../../services/AvatarService'
 import styles from '../../styles/admin.module.scss'
 
 interface Props {
-  className?: string
+  // locationState?: any
   search: string
 }
 
-const AvatarTable = ({ className, search }: Props) => {
-  const adminAvatarState = useAdminAvatarState()
+const AvatarTable = (props: Props) => {
+  const adminAvatarState = useAvatarState()
+  const { search } = props
   const authState = useAuthState()
   const user = authState.user
   const adminAvatars = adminAvatarState.avatars
   const adminAvatarCount = adminAvatarState.total
   const { t } = useTranslation()
+  const dispatch = useDispatch()
 
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(AVATAR_PAGE_LIMIT)
-  const [openConfirm, setOpenConfirm] = useState(false)
+  const [popConfirmOpen, setPopConfirmOpen] = useState(false)
   const [avatarId, setAvatarId] = useState('')
   const [avatarName, setAvatarName] = useState('')
   const [fieldOrder, setFieldOrder] = useState('asc')
   const [sortField, setSortField] = useState('name')
-  const [openDrawer, setOpenDrawer] = useState(false)
+  const [viewModal, setViewModal] = useState(false)
   const [avatarData, setViewAvatarData] = useState<AvatarInterface | null>(null)
 
   const handlePageChange = (event: unknown, newPage: number) => {
-    AdminAvatarService.fetchAdminAvatars(newPage, search, sortField, fieldOrder)
+    AvatarService.fetchAdminAvatars(newPage, search, sortField, fieldOrder)
     setPage(newPage)
   }
 
   useEffect(() => {
     if (adminAvatarState.fetched.value) {
-      AdminAvatarService.fetchAdminAvatars(page, search, sortField, fieldOrder)
+      AvatarService.fetchAdminAvatars(page, search, sortField, fieldOrder)
     }
   }, [fieldOrder])
+
+  const handleCloseModal = () => {
+    setPopConfirmOpen(false)
+  }
 
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10))
@@ -57,7 +62,7 @@ const AvatarTable = ({ className, search }: Props) => {
   }
 
   useEffect(() => {
-    AdminAvatarService.fetchAdminAvatars(0, search, sortField, fieldOrder)
+    AvatarService.fetchAdminAvatars(0, search, sortField, fieldOrder)
   }, [user?.id?.value, search, adminAvatarState.updateNeeded.value])
 
   const createData = (
@@ -74,22 +79,22 @@ const AvatarTable = ({ className, search }: Props) => {
       action: (
         <>
           <a
-            href="#"
+            href="#h"
             className={styles.actionStyle}
             onClick={() => {
               setViewAvatarData(el)
-              setOpenDrawer(true)
+              setViewModal(true)
             }}
           >
             <span className={styles.spanWhite}>{t('user:avatar.view')}</span>
           </a>
           <a
-            href="#"
+            href="#h"
             className={styles.actionStyle}
             onClick={() => {
+              setPopConfirmOpen(true)
               setAvatarId(el.id)
               setAvatarName(name as any)
-              setOpenConfirm(true)
             }}
           >
             <span className={styles.spanDange}>{t('user:avatar.delete')}</span>
@@ -104,12 +109,16 @@ const AvatarTable = ({ className, search }: Props) => {
   })
 
   const submitRemoveAvatar = async () => {
-    await AdminAvatarService.removeAdminAvatar(avatarId, avatarName)
-    setOpenConfirm(false)
+    await AvatarService.removeAdminAvatar(avatarId, avatarName)
+    setPopConfirmOpen(false)
+  }
+
+  const closeViewModal = () => {
+    setViewModal(false)
   }
 
   return (
-    <Box className={className}>
+    <React.Fragment>
       <TableComponent
         allowSort={false}
         fieldOrder={fieldOrder}
@@ -124,22 +133,23 @@ const AvatarTable = ({ className, search }: Props) => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       <ConfirmModal
-        open={openConfirm}
-        description={`${t('admin:components.avatar.confirmAvatarDelete')} '${avatarName}'?`}
-        onClose={() => setOpenConfirm(false)}
-        onSubmit={submitRemoveAvatar}
+        popConfirmOpen={popConfirmOpen}
+        handleCloseModal={handleCloseModal}
+        submit={submitRemoveAvatar}
+        name={avatarName}
+        label={'avatar'}
       />
-      {avatarData && openDrawer && (
-        <DrawerView open onClose={() => setOpenDrawer(false)}>
+      {avatarData && viewModal && (
+        <Drawer anchor="right" open={viewModal} onClose={closeViewModal} classes={{ paper: styles.paperDrawer }}>
           <AvatarSelectMenu
             adminStyles={styles}
-            onAvatarUpload={() => dispatchAction(AdminAvatarActions.avatarUpdated())}
-            changeActiveMenu={() => setOpenDrawer(false)}
+            onAvatarUpload={() => dispatch(AvatarAction.avatarUpdated())}
+            changeActiveMenu={closeViewModal}
             avatarData={avatarData}
           />
-        </DrawerView>
+        </Drawer>
       )}
-    </Box>
+    </React.Fragment>
   )
 }
 

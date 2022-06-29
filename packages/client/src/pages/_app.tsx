@@ -10,10 +10,11 @@ import {
 import { initGA, logPageView } from '@xrengine/client-core/src/common/components/analytics'
 import { defaultAction } from '@xrengine/client-core/src/common/components/NotificationActions'
 import { ProjectService, useProjectState } from '@xrengine/client-core/src/common/services/ProjectService'
+import { store, useDispatch } from '@xrengine/client-core/src/store'
 import { theme } from '@xrengine/client-core/src/theme'
 import { useAuthState } from '@xrengine/client-core/src/user/services/AuthService'
 import GlobalStyle from '@xrengine/client-core/src/util/GlobalStyle'
-import { matches } from '@xrengine/engine/src/common/functions/MatchesUtils'
+import { StoredLocalAction } from '@xrengine/client-core/src/util/StoredLocalState'
 import { loadWebappInjection } from '@xrengine/projects/loadWebappInjection'
 
 import { StyledEngineProvider, Theme, ThemeProvider } from '@mui/material/styles'
@@ -22,8 +23,10 @@ import RouterComp from '../route/public'
 
 import './styles.scss'
 
-import { NotificationAction, NotificationActions } from '@xrengine/client-core/src/common/services/NotificationService'
-import { addActionReceptor, removeActionReceptor } from '@xrengine/hyperflux'
+import {
+  NotificationActions,
+  NotificationActionType
+} from '@xrengine/client-core/src/common/services/NotificationService'
 
 declare module '@mui/styles/defaultTheme' {
   // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -45,6 +48,7 @@ const App = (): any => {
   const [favicon32, setFavicon32] = useState(clientSetting?.favicon32px)
   const [description, setDescription] = useState(clientSetting?.siteDescription)
   const [clientThemeSettings, setClientThemeSettings] = useState(clientSetting?.themeSettings)
+  const dispatch = useDispatch()
   const [projectComponents, setProjectComponents] = useState<Array<any>>(null!)
   const [fetchedProjectComponents, setFetchedProjectComponents] = useState(false)
   const projectState = useProjectState()
@@ -55,24 +59,34 @@ const App = (): any => {
     } else {
       ;(window as any).env = (window as any).env ?? ''
     }
+
+    dispatch(StoredLocalAction.restoreLocalData())
+
     initGA()
 
     logPageView()
   }, [])
 
   useEffect(() => {
-    const receptor = (action): any => {
-      matches(action).when(NotificationAction.notify.matches, (action) => {
-        notistackRef.current?.enqueueSnackbar(action.message, {
-          variant: action.options.variant,
-          action: NotificationActions[action.options.actionType ?? 'default']
-        })
-      })
+    const receptor = (action: NotificationActionType): any => {
+      switch (action.type) {
+        case 'ENQUEUE_NOTIFICATION': {
+          notistackRef.current?.enqueueSnackbar(action.message, {
+            variant: action.options.variant,
+            action: NotificationActions[action.options.actionType ?? 'default']
+          })
+        }
+        default:
+          break
+      }
     }
-    addActionReceptor(receptor)
+    store.receptors.push(receptor)
 
     return () => {
-      removeActionReceptor(receptor)
+      const index = store.receptors.indexOf(receptor)
+      if (index >= 0) {
+        store.receptors.splice(index, 1)
+      }
     }
   }, [notistackRef])
 

@@ -6,14 +6,17 @@ import Grid from '@mui/material/Grid'
 
 import Search from '../../common/Search'
 import styles from '../../styles/admin.module.scss'
-import GroupDrawer, { GroupDrawerMode } from './GroupDrawer'
+import CreateGroup from './CreateGroup'
 import GroupTable from './GroupTable'
 
 const GroupConsole = () => {
-  const [openGroupDrawer, setOpenGroupDrawer] = useState(false)
+  const [groupOpen, setGroupOpen] = useState(false)
   const [search, setSearch] = React.useState('')
   const { t } = useTranslation()
 
+  const openModalCreate = (open: boolean) => {
+    setGroupOpen(open)
+  }
   const handleChange = (e: any) => {
     setSearch(e.target.value)
   }
@@ -30,16 +33,17 @@ const GroupConsole = () => {
               className={styles.openModalBtn}
               type="submit"
               variant="contained"
-              onClick={() => setOpenGroupDrawer(true)}
+              onClick={() => openModalCreate(true)}
             >
               {t('admin:components.group.createGroup')}
             </Button>
           </Grid>
         </Grid>
-
-        <GroupTable className={styles.rootTableWithSearch} search={search} />
+        <div className={styles.rootTableWithSearch}>
+          <GroupTable search={search} />
+        </div>
       </div>
-      <GroupDrawer open={openGroupDrawer} mode={GroupDrawerMode.Create} onClose={() => setOpenGroupDrawer(false)} />
+      <CreateGroup open={groupOpen} handleClose={openModalCreate} />
     </React.Fragment>
   )
 }

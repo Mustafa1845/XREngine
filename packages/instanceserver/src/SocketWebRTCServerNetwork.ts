@@ -1,6 +1,6 @@
-import { Consumer, DataProducer, Producer, Router, Transport, WebRtcTransport, Worker } from 'mediasoup/node/lib/types'
+import * as https from 'https'
+import { DataProducer, Router, Transport, WebRtcTransport, Worker } from 'mediasoup/node/lib/types'
 
-import { MediaStreamAppData } from '@xrengine/common/src/interfaces/MediaStreamConstants'
 import { UserId } from '@xrengine/common/src/interfaces/UserId'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { Network } from '@xrengine/engine/src/networking/classes/Network'
@@ -14,8 +14,6 @@ import { startWebRTC } from './WebRTCFunctions'
 
 const logger = multiLogger.child({ component: 'instanceserver:webrtc:network' })
 
-export type WebRTCTransportExtension = Omit<WebRtcTransport, 'appData'> & { appData: MediaStreamAppData }
-
 export class SocketWebRTCServerNetwork extends Network {
   workers: Worker[] = []
   routers: Record<string, Router[]>
@@ -26,11 +24,8 @@ export class SocketWebRTCServerNetwork extends Network {
   outgoingDataProducer: DataProducer
   request = () => null!
 
-  mediasoupTransports: WebRTCTransportExtension[] = []
+  mediasoupTransports: WebRtcTransport[] = []
   transportsConnectPending: Promise<void>[] = []
-
-  producers = [] as Producer[]
-  consumers = [] as Consumer[]
 
   constructor(hostId: string, app: Application) {
     super(hostId)
@@ -39,8 +34,10 @@ export class SocketWebRTCServerNetwork extends Network {
 
   public sendActions = (actions: Array<Required<Action>>): any => {
     if (!actions.length) return
+    const world = Engine.instance.currentWorld
+    const clients = world.clients
     const userIdMap = {} as { [socketId: string]: UserId }
-    for (const [id, client] of this.peers) userIdMap[client.socketId!] = id
+    for (const [id, client] of clients) userIdMap[client.socketId!] = id
     const outgoing = Engine.instance.store.actions.outgoing
 
     for (const [socketID, socket] of this.app.io.of('/').sockets) {

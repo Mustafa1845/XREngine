@@ -1,8 +1,8 @@
 import { MathUtils } from 'three'
 
-import { Engine } from '../classes/Engine'
 import { Entity } from '../classes/Entity'
 import EntityTree, { EntityTreeNode } from '../classes/EntityTree'
+import { useWorld } from './SystemHooks'
 
 // ========== Entity Tree Functions ========== //
 /**
@@ -10,7 +10,7 @@ import EntityTree, { EntityTreeNode } from '../classes/EntityTree'
  * @param node Node to be added to the maps
  * @param tree Entity Tree
  */
-export function addToEntityTreeMaps(node: EntityTreeNode, tree = Engine.instance.currentWorld.entityTree) {
+export function addToEntityTreeMaps(node: EntityTreeNode, tree = useWorld().entityTree) {
   tree.entityNodeMap.set(node.entity, node)
   tree.uuidNodeMap.set(node.uuid, node)
 }
@@ -20,7 +20,7 @@ export function addToEntityTreeMaps(node: EntityTreeNode, tree = Engine.instance
  * @param node Node to be removed from the maps
  * @param tree Entity tree
  */
-export function removeFromEntityTreeMaps(node: EntityTreeNode, tree = Engine.instance.currentWorld.entityTree) {
+export function removeFromEntityTreeMaps(node: EntityTreeNode, tree = useWorld().entityTree) {
   tree.entityNodeMap.delete(node.entity)
   tree.uuidNodeMap.delete(node.uuid)
 }
@@ -29,7 +29,7 @@ export function removeFromEntityTreeMaps(node: EntityTreeNode, tree = Engine.ins
  * Initialize the world with enity tree
  * @param world World
  */
-export function initializeEntityTree(world = Engine.instance.currentWorld): void {
+export function initializeEntityTree(world = useWorld()): void {
   world.entityTree = {
     rootNode: createEntityNode(-1 as Entity),
     entityNodeMap: new Map(),
@@ -51,7 +51,7 @@ export function addEntityNodeInTree(
   parentNode?: EntityTreeNode,
   index?: number,
   skipRootUpdate = false,
-  tree = Engine.instance.currentWorld.entityTree
+  tree = useWorld().entityTree
 ): EntityTreeNode {
   if (parentNode == null) {
     if (!skipRootUpdate) {
@@ -84,7 +84,7 @@ export function addEntityNodeInTree(
  * Empties the the tree and removes its element from memory
  * @param tree Entity tree
  */
-export function emptyEntityTree(tree = Engine.instance.currentWorld.entityTree): void {
+export function emptyEntityTree(tree = useWorld().entityTree): void {
   const arr = [] as EntityTreeNode[]
   tree.entityNodeMap.forEach((node) => arr.push(node))
 
@@ -93,9 +93,6 @@ export function emptyEntityTree(tree = Engine.instance.currentWorld.entityTree):
   }
 
   tree.rootNode = createEntityNode(-1 as Entity)
-
-  tree.entityNodeMap.clear()
-  tree.uuidNodeMap.clear()
 }
 // ========== Entity Tree Functions ========== //
 
@@ -143,7 +140,7 @@ export function addEntityNodeChild(node: EntityTreeNode, child: EntityTreeNode, 
 export function removeEntityNodeChild(
   node: EntityTreeNode,
   child: EntityTreeNode,
-  tree = Engine.instance.currentWorld.entityTree
+  tree = useWorld().entityTree
 ): EntityTreeNode | undefined {
   if (!node.children) return
 
@@ -170,9 +167,9 @@ export function removeEntityNodeChild(
  */
 export function removeEntityNodeFromParent(
   node: EntityTreeNode,
-  tree = Engine.instance.currentWorld.entityTree
+  tree = useWorld().entityTree
 ): EntityTreeNode | undefined {
-  if (typeof node.parentEntity !== 'undefined') {
+  if (node.parentEntity) {
     const parent = tree.entityNodeMap.get(node.parentEntity)
     if (parent) return removeEntityNodeChild(parent, node, tree)
   }
@@ -209,7 +206,7 @@ export function traverseEntityNode(
   node: EntityTreeNode,
   cb: (node: EntityTreeNode, index: number) => void,
   index = 0,
-  tree = Engine.instance.currentWorld.entityTree
+  tree = useWorld().entityTree
 ): void {
   cb(node, index)
 
@@ -232,8 +229,7 @@ export function iterateEntityNode(
   node: EntityTreeNode,
   cb: (node: EntityTreeNode, index: number) => void,
   pred: (node: EntityTreeNode) => boolean = (x) => true,
-  tree = Engine.instance.currentWorld.entityTree,
-  snubChildren: boolean = false
+  tree = useWorld().entityTree
 ): void {
   const frontier = [[node]]
   while (frontier.length > 0) {
@@ -244,15 +240,10 @@ export function iterateEntityNode(
       if (pred(item)) {
         cb(item, idx)
         idx += 1
-        if (snubChildren)
-          frontier.push(
-            item.children?.filter((x) => tree.entityNodeMap.has(x)).map((x) => tree.entityNodeMap.get(x)!) ?? []
-          )
-      }
-      if (!snubChildren) {
-        frontier.push(
-          item.children?.filter((x) => tree.entityNodeMap.has(x)).map((x) => tree.entityNodeMap.get(x)!) ?? []
-        )
+        const children = item.children
+        if (children && children.length > 0) {
+          frontier.push(children.filter((x) => tree.entityNodeMap.has(x)).map((x) => tree.entityNodeMap.get(x)!))
+        }
       }
     }
   }
@@ -267,9 +258,9 @@ export function iterateEntityNode(
 export function traverseEntityNodeParent(
   node: EntityTreeNode,
   cb: (parent: EntityTreeNode) => void,
-  tree = Engine.instance.currentWorld.entityTree
+  tree = useWorld().entityTree
 ): void {
-  if (typeof node.parentEntity !== 'undefined') {
+  if (node.parentEntity) {
     const parent = tree.entityNodeMap.get(node.parentEntity)
 
     if (parent) {
@@ -294,10 +285,7 @@ export function isEntityNode(node: any): node is EntityTreeNode {
  * @param tree Entity Tree object
  * @returns Entity Tree node array obtained from passed Entities.
  */
-export function getEntityNodeArrayFromEntities(
-  entities: Entity[],
-  tree = Engine.instance.currentWorld.entityTree
-): EntityTreeNode[] {
+export function getEntityNodeArrayFromEntities(entities: Entity[], tree = useWorld().entityTree): EntityTreeNode[] {
   const arr = [] as EntityTreeNode[]
 
   for (const entity of entities) {

@@ -1,66 +1,65 @@
 import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
 import { AdminScopeType } from '@xrengine/common/src/interfaces/AdminScopeType'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
 
-import { API } from '../../API'
 import { NotificationService } from '../../common/services/NotificationService'
+import { client } from '../../feathers'
+import { store, useDispatch } from '../../store'
 
 //State
 export const SCOPE_PAGE_LIMIT = 100
 
-const AdminScopeTypeState = defineState({
-  name: 'AdminScopeTypeState',
-  initial: () => ({
-    skip: 0,
-    limit: SCOPE_PAGE_LIMIT,
-    total: 0,
-    retrieving: false,
-    fetched: false,
-    updateNeeded: true,
-    lastFetched: Date.now(),
-    scopeTypes: [] as Array<AdminScopeType>,
-    fetching: false
-  })
+const state = createState({
+  skip: 0,
+  limit: SCOPE_PAGE_LIMIT,
+  total: 0,
+  retrieving: false,
+  fetched: false,
+  updateNeeded: true,
+  lastFetched: Date.now(),
+  scopeTypes: [] as Array<AdminScopeType>,
+  fetching: false
 })
 
-const getScopeTypesReceptor = (action: typeof AdminScopeTypeActions.getScopeTypes.matches._TYPE) => {
-  const state = getState(AdminScopeTypeState)
-  return state.merge({
-    scopeTypes: action.adminScopeTypeResult.data,
-    skip: action.adminScopeTypeResult.skip,
-    limit: action.adminScopeTypeResult.limit,
-    total: action.adminScopeTypeResult.total,
-    retrieving: false,
-    fetched: true,
-    updateNeeded: false,
-    lastFetched: Date.now()
-  })
-}
+store.receptors.push((action: ScopeActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'SCOPE_TYPES_RETRIEVED':
+        return s.merge({
+          scopeTypes: action.adminScopeTypeResult.data,
+          skip: action.adminScopeTypeResult.skip,
+          limit: action.adminScopeTypeResult.limit,
+          total: action.adminScopeTypeResult.total,
+          retrieving: false,
+          fetched: true,
+          updateNeeded: false,
+          lastFetched: Date.now()
+        })
+    }
+  }, action.type)
+})
 
-export const AdminScopeTypeReceptor = {
-  getScopeTypesReceptor
-}
+export const accessScopeTypeState = () => state
 
-export const accessScopeTypeState = () => getState(AdminScopeTypeState)
-
-export const useScopeTypeState = () => useState(accessScopeTypeState())
+export const useScopeTypeState = () => useState(state) as any as typeof state
 
 //Service
-export const AdminScopeTypeService = {
+export const ScopeTypeService = {
   getScopeTypeService: async (incDec?: 'increment' | 'decrement') => {
+    const dispatch = useDispatch()
+
     const scopeState = accessScopeTypeState()
     const skip = scopeState.skip.value
     const limit = scopeState.limit.value
     try {
-      const result = (await API.instance.client.service('scope-type').find({
+      const result = (await client.service('scope-type').find({
         query: {
           $skip: incDec === 'increment' ? skip + limit : incDec === 'decrement' ? skip - limit : skip,
           $limit: limit
         }
       })) as Paginated<AdminScopeType>
-      dispatchAction(AdminScopeTypeActions.getScopeTypes({ adminScopeTypeResult: result }))
+      dispatch(ScopeTypeAction.getScopeTypes(result))
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
@@ -68,9 +67,13 @@ export const AdminScopeTypeService = {
 }
 
 //Action
-export class AdminScopeTypeActions {
-  static getScopeTypes = defineAction({
-    type: 'SCOPE_TYPES_RETRIEVED' as const,
-    adminScopeTypeResult: matches.object as Validator<unknown, Paginated<AdminScopeType>>
-  })
+export const ScopeTypeAction = {
+  getScopeTypes: (adminScopeTypeResult: Paginated<AdminScopeType>) => {
+    return {
+      type: 'SCOPE_TYPES_RETRIEVED' as const,
+      adminScopeTypeResult: adminScopeTypeResult
+    }
+  }
 }
+
+export type ScopeActionType = ReturnType<typeof ScopeTypeAction[keyof typeof ScopeTypeAction]>

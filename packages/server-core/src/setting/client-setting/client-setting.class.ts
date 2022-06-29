@@ -24,11 +24,12 @@ export class ClientSetting<T = ClientSettingDataType> extends Service<T> {
       if (typeof appSocialLinks === 'string') appSocialLinks = JSON.parse(appSocialLinks)
       if (typeof themeSettings === 'string') themeSettings = JSON.parse(themeSettings)
 
-      return {
+      const returned = {
         ...el,
         appSocialLinks: appSocialLinks,
         themeSettings: themeSettings
       }
+      return returned
     })
 
     return {

@@ -2,10 +2,9 @@ import assert from 'assert'
 
 import { defineState, getState, registerState } from '@xrengine/hyperflux'
 
-import { createEngine, initializeCoreSystems, setupEngineActionSystems } from '../../initializeEngine'
+import { createEngine, initializeCoreSystems } from '../../initializeEngine'
 import { Engine } from '../classes/Engine'
 import { World } from '../classes/World'
-import { initSystems } from './SystemFunctions'
 import { SystemUpdateType } from './SystemUpdateType'
 
 const MockState = defineState({
@@ -27,8 +26,6 @@ const MockSystemModulePromise = async () => {
 describe('FixedPipelineSystem', () => {
   it('can run multiple fixed ticks to catch up to elapsed time', async () => {
     createEngine()
-    setupEngineActionSystems()
-    const world = Engine.instance.currentWorld
 
     Engine.instance.injectedSystems = [
       {
@@ -36,8 +33,10 @@ describe('FixedPipelineSystem', () => {
         type: SystemUpdateType.FIXED
       }
     ]
-    await initSystems(world, Engine.instance.injectedSystems)
 
+    await initializeCoreSystems()
+
+    const world = Engine.instance.currentWorld
     const mockState = getState(MockState)
 
     assert.equal(world.elapsedSeconds, 0)
@@ -57,8 +56,6 @@ describe('FixedPipelineSystem', () => {
 
   it('can skip fixed ticks to catch up to elapsed time', async () => {
     createEngine()
-    setupEngineActionSystems()
-    const world = Engine.instance.currentWorld
 
     Engine.instance.injectedSystems = [
       {
@@ -66,8 +63,10 @@ describe('FixedPipelineSystem', () => {
         type: SystemUpdateType.FIXED
       }
     ]
-    await initSystems(world, Engine.instance.injectedSystems)
 
+    await initializeCoreSystems()
+
+    const world = Engine.instance.currentWorld
     const mockState = getState(MockState)
 
     world.startTime = 0

@@ -13,7 +13,8 @@ declare module '@xrengine/common/declarations' {
 export default (app: Application): void => {
   app.use('instanceserver-provision', {
     patch: async ({ locationId }, params: Params) => {
-      return patchInstanceserverLocation(app, locationId)
+      const result = await patchInstanceserverLocation(app, locationId)
+      return result
     }
   })
 

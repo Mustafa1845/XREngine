@@ -1,3 +1,4 @@
+import { store } from '@xrengine/client-core/src/store'
 import { SceneJson } from '@xrengine/common/src/interfaces/SceneInterface'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
@@ -11,7 +12,6 @@ import {
 import { ScenePrefabTypes } from '@xrengine/engine/src/scene/functions/registerPrefabs'
 import { reparentObject3D } from '@xrengine/engine/src/scene/functions/ReparentFunction'
 import { createNewEditorNode, loadSceneEntity } from '@xrengine/engine/src/scene/functions/SceneLoading'
-import { dispatchAction } from '@xrengine/hyperflux'
 
 import { executeCommand } from '../classes/History'
 import EditorCommands, { CommandFuncType, CommandParams, ObjectCommands } from '../constants/EditorCommands'
@@ -80,7 +80,7 @@ function emitEventBefore(command: AddObjectCommandParams) {
   if (command.preventEvents) return
 
   cancelGrabOrPlacement()
-  dispatchAction(SelectionAction.changedBeforeSelection())
+  store.dispatch(SelectionAction.changedBeforeSelection())
 }
 
 function emitEventAfter(command: AddObjectCommandParams) {
@@ -88,8 +88,8 @@ function emitEventAfter(command: AddObjectCommandParams) {
 
   if (command.updateSelection) updateOutlinePassSelection()
 
-  dispatchAction(EditorAction.sceneModified({ modified: true }))
-  dispatchAction(SelectionAction.changedSceneGraph())
+  store.dispatch(EditorAction.sceneModified(true))
+  store.dispatch(SelectionAction.changedSceneGraph())
 }
 
 function addObject(command: AddObjectCommandParams) {
@@ -100,7 +100,7 @@ function addObject(command: AddObjectCommandParams) {
     const object = rootObjects[i]
 
     if (command.prefabTypes) {
-      createNewEditorNode(object, command.prefabTypes[i] ?? command.prefabTypes[0])
+      createNewEditorNode(object.entity, command.prefabTypes[i] ?? command.prefabTypes[0])
     } else if (command.sceneData) {
       const data = command.sceneData[i] ?? command.sceneData[0]
 

@@ -7,11 +7,13 @@ import { useTranslation } from 'react-i18next'
 import { useHistory } from 'react-router-dom'
 import styled from 'styled-components'
 
+import { useDispatch } from '@xrengine/client-core/src/store'
 import { SceneJson } from '@xrengine/common/src/interfaces/SceneInterface'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { getEngineState, useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
+import { useWorld } from '@xrengine/engine/src/ecs/functions/SystemHooks'
 import { gltfToSceneJson, sceneToGLTF } from '@xrengine/engine/src/scene/functions/GLTFConversion'
-import { dispatchAction, useHookEffect } from '@xrengine/hyperflux'
+import { useHookEffect } from '@xrengine/hyperflux'
 
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import Inventory2Icon from '@mui/icons-material/Inventory2'
@@ -23,7 +25,7 @@ import { disposeProject, loadProjectScene, runPreprojectLoadTasks } from '../fun
 import { createNewScene, getScene, saveScene } from '../functions/sceneFunctions'
 import { initializeRenderer } from '../functions/sceneRenderFunctions'
 import { takeScreenshot } from '../functions/takeScreenshot'
-import { uploadBakeToServer } from '../functions/uploadEnvMapBake'
+import { uploadBakeToServer } from '../functions/uploadCubemapBake'
 import { cmdOrCtrlString } from '../functions/utils'
 import { useEditorErrorState } from '../services/EditorErrorServices'
 import { EditorAction, useEditorState } from '../services/EditorServices'
@@ -130,6 +132,7 @@ const EditorContainer = () => {
   const [editorReady, setEditorReady] = useState(false)
   const [DialogComponent, setDialogComponent] = useState<JSX.Element | null>(null)
   const [toggleRefetchScenes, setToggleRefetchScenes] = useState(false)
+  const dispatch = useDispatch()
   const history = useHistory()
   const dockPanelRef = useRef<DockLayout>(null)
 
@@ -137,7 +140,7 @@ const EditorContainer = () => {
     setDialogComponent(<ProgressDialog title={t('editor:loading')} message={t('editor:loadingMsg')} />)
     try {
       await loadProjectScene(sceneFile)
-      dispatchAction(EditorAction.sceneModified({ modified: true }))
+      dispatch(EditorAction.sceneModified(true))
       setDialogComponent(null)
     } catch (error) {
       console.error(error)
@@ -268,9 +271,9 @@ const EditorContainer = () => {
           )
         })) as any
         if (result && projectName.value) {
-          await uploadBakeToServer(Engine.instance.currentWorld.entityTree.rootNode.entity)
+          await uploadBakeToServer(useWorld().entityTree.rootNode.entity)
           await saveScene(projectName.value, result.name, blob, abortController.signal)
-          dispatchAction(EditorAction.sceneModified({ modified: false }))
+          dispatch(EditorAction.sceneModified(false))
         }
       }
       setDialogComponent(null)
@@ -389,11 +392,11 @@ const EditorContainer = () => {
 
     try {
       if (projectName.value) {
-        await uploadBakeToServer(Engine.instance.currentWorld.entityTree.rootNode.entity)
+        await uploadBakeToServer(useWorld().entityTree.rootNode.entity)
         await saveScene(projectName.value, sceneName.value, blob, abortController.signal)
       }
 
-      dispatchAction(EditorAction.sceneModified({ modified: false }))
+      dispatch(EditorAction.sceneModified(false))
 
       setDialogComponent(null)
     } catch (error) {

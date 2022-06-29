@@ -10,12 +10,14 @@ import EmptyLayout from '../../../common/components/EmptyLayout'
 import styles from './index.module.scss'
 
 interface Props {
-  token?: string
   completeAction?: () => void
   resetPassword: (token: string, password: string) => void
+  token: string
+  type?: string
 }
 
-const ResetPassword = ({ token = '', completeAction, resetPassword }: Props): JSX.Element => {
+export default (props: Props): JSX.Element => {
+  const { resetPassword, token } = props
   const initialState = { password: '' }
   const [state, setState] = useState(initialState)
   const { t } = useTranslation()
@@ -27,7 +29,7 @@ const ResetPassword = ({ token = '', completeAction, resetPassword }: Props): JS
   const handleReset = (e: any): void => {
     e.preventDefault()
     resetPassword(token, state.password)
-    if (completeAction) completeAction()
+    if (props.completeAction) props.completeAction()
   }
 
   return (
@@ -62,5 +64,3 @@ const ResetPassword = ({ token = '', completeAction, resetPassword }: Props): JS
     </EmptyLayout>
   )
 }
-
-export default ResetPassword

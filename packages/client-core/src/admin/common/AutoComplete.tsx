@@ -10,31 +10,19 @@ import styles from '../styles/autocomplete.module.scss'
 interface TagProps extends ReturnType<AutocompleteGetTagProps> {
   label: string
   className: any
-  disabled?: boolean
 }
 
-const Tag = ({ label, disabled, onDelete, ...other }: TagProps) => {
+function Tag(props: TagProps) {
+  const { label, onDelete, ...other } = props
   return (
     <div {...other}>
-      <span style={{ opacity: disabled ? 0.5 : 1 }}>{label}</span>
-      {!disabled && <CloseIcon onClick={onDelete} />}
+      <span>{label}</span>
+      <CloseIcon onClick={onDelete} />
     </div>
   )
 }
 
-export interface AutoCompleteData {
-  type: string
-}
-
-interface Props {
-  data: AutoCompleteData[]
-  label: string
-  defaultValue?: AutoCompleteData[]
-  disabled?: boolean
-  onChange?: (value: any) => void
-}
-
-const AutoComplete = ({ data, label, disabled, onChange, defaultValue = [] }: Props) => {
+export default function AutoComplete({ data, label, handleChangeScopeType, scopes = [] }) {
   const {
     getRootProps,
     getInputProps,
@@ -46,41 +34,33 @@ const AutoComplete = ({ data, label, disabled, onChange, defaultValue = [] }: Pr
     focused,
     setAnchorEl
   } = useAutocomplete({
-    id: 'autocomplete',
-    defaultValue: defaultValue,
+    id: 'customized-hook-demo',
+    defaultValue: scopes,
     multiple: true,
     options: data,
     disableCloseOnSelect: true,
     getOptionLabel: (option) => option.type,
     onChange: (event: React.ChangeEvent<{}>, value: any) => {
-      onChange && onChange(value)
+      handleChangeScopeType(value)
     },
     getOptionDisabled: (option) => !!option.disabled,
     isOptionEqualToValue: (option, value) => option.type === value.type
   })
-
   return (
     <React.Fragment>
+      <label>{_.upperFirst(label)}</label>
       <div className={styles.root}>
         <div {...getRootProps()}>
           <div ref={setAnchorEl} className={`${styles.inputWrapper} ${focused ? 'focused' : ''}`}>
-            <fieldset
-              aria-hidden="true"
-              className="MuiOutlinedInput-notchedOutline-SCvfC knJUav MuiOutlinedInput-notchedOutline"
-            >
-              <legend>
-                <span>{_.upperFirst(label)}</span>
-              </legend>
-            </fieldset>
-            {value.map((option: AutoCompleteData, index: number) => (
-              <Tag className={styles.tag} label={option.type} disabled={disabled} {...getTagProps({ index })} />
+            {value.map((option: DataType, index: number) => (
+              <Tag className={styles.tag} label={option.type} {...getTagProps({ index })} />
             ))}
-            <input disabled={disabled} {...getInputProps()} />
+            <input {...getInputProps()} />
           </div>
         </div>
         {groupedOptions.length > 0 && (
           <ul className={styles.listbox} {...getListboxProps()}>
-            {groupedOptions.map((option, index) => (
+            {(groupedOptions as typeof data).map((option, index) => (
               <li {...getOptionProps({ option, index })}>
                 <span>{option.type}</span>
                 <CheckIcon fontSize="small" />
@@ -93,4 +73,6 @@ const AutoComplete = ({ data, label, disabled, onChange, defaultValue = [] }: Pr
   )
 }
 
-export default AutoComplete
+interface DataType {
+  type: string
+}

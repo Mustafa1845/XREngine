@@ -1,97 +1,81 @@
 import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
 import { AdminAuthSetting, PatchAuthSetting } from '@xrengine/common/src/interfaces/AdminAuthSetting'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
 
-import { API } from '../../../API'
 import { NotificationService } from '../../../common/services/NotificationService'
+import { client } from '../../../feathers'
+import { store, useDispatch } from '../../../store'
 import waitForClientAuthenticated from '../../../util/wait-for-client-authenticated'
 
-const AuthSettingsState = defineState({
-  name: 'AuthSettingsState',
-  initial: () => ({
-    authSettings: [] as Array<AdminAuthSetting>,
-    skip: 0,
-    limit: 100,
-    total: 0,
-    retrieving: false,
-    fetched: false,
-    updateNeeded: true
-  })
+//State
+const state = createState({
+  authSettings: [] as Array<AdminAuthSetting>,
+  skip: 0,
+  limit: 100,
+  total: 0,
+  retrieving: false,
+  fetched: false,
+  updateNeeded: true
 })
 
-export const AuthSettingsServiceReceptor = (action) => {
-  getState(AuthSettingsState).batch((s) => {
-    matches(action)
-      .when(AuthSettingsActions.authSettingRetrieved.matches, (action) => {
+store.receptors.push((action: AuthSettingActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'ADMIN_AUTH_SETTING_FETCHED':
         return s.merge({
-          authSettings: action.authSetting.data,
-          skip: action.authSetting.skip,
-          limit: action.authSetting.limit,
-          total: action.authSetting.total,
+          authSettings: action.adminAuthSetting.data,
+          skip: action.adminAuthSetting.skip,
+          limit: action.adminAuthSetting.limit,
+          total: action.adminAuthSetting.total,
           updateNeeded: false
         })
-      })
-      .when(AuthSettingsActions.authSettingPatched.matches, (action) => {
+      case 'ADMIN_AUTH_SETTING_PATCHED':
         return s.updateNeeded.set(true)
-      })
-  })
-}
+    }
+  }, action.type)
+})
 
-// const authSettingRetrievedReceptor = (action: typeof AuthSettingsActions.authSettingRetrieved.matches._TYPE) => {
-//   const state = getState(AuthSettingsState)
-//   return state.merge({
-//     authSettings: action.authSetting.data,
-//     skip: action.authSetting.skip,
-//     limit: action.authSetting.limit,
-//     total: action.authSetting.total,
-//     updateNeeded: false
-//   })
-// }
+export const accessAdminAuthSettingState = () => state
 
-// const authSettingPatchedReceptor = (action: typeof AuthSettingsActions.authSettingPatched.matches._TYPE) => {
-//   const state = getState(AuthSettingsState)
-//   return state.updateNeeded.set(true)
-// }
+export const useAdminAuthSettingState = () => useState(state) as any as typeof state
 
-// export const AuthSettingsReceptors = {
-//   authSettingRetrievedReceptor,
-//   authSettingPatchedReceptor
-// }
-
-export const accessAuthSettingState = () => getState(AuthSettingsState)
-
-export const useAuthSettingState = () => useState(accessAuthSettingState())
-
-export const AuthSettingsService = {
+//Service
+export const AuthSettingService = {
   fetchAuthSetting: async () => {
+    const dispatch = useDispatch()
     try {
       await waitForClientAuthenticated()
-      const authSetting = (await API.instance.client
-        .service('authentication-setting')
-        .find()) as Paginated<AdminAuthSetting>
-      dispatchAction(AuthSettingsActions.authSettingRetrieved({ authSetting }))
+      const authSetting = (await client.service('authentication-setting').find()) as Paginated<AdminAuthSetting>
+      dispatch(AuthSettingAction.authSettingRetrieved(authSetting))
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   patchAuthSetting: async (data: PatchAuthSetting, id: string) => {
+    const dispatch = useDispatch()
     try {
-      await API.instance.client.service('authentication-setting').patch(id, data)
-      dispatchAction(AuthSettingsActions.authSettingPatched())
+      await client.service('authentication-setting').patch(id, data)
+      dispatch(AuthSettingAction.authSettingPatched())
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   }
 }
 
-export class AuthSettingsActions {
-  static authSettingRetrieved = defineAction({
-    type: 'AUTH_SETTINGS_FETCHED' as const,
-    authSetting: matches.object as Validator<unknown, Paginated<AdminAuthSetting>>
-  })
-  static authSettingPatched = defineAction({
-    type: 'AUTH_SETTINGS_PATCHED' as const
-  })
+//Action
+export const AuthSettingAction = {
+  authSettingRetrieved: (adminAuthSetting: Paginated<AdminAuthSetting>) => {
+    return {
+      type: 'ADMIN_AUTH_SETTING_FETCHED' as const,
+      adminAuthSetting: adminAuthSetting
+    }
+  },
+  authSettingPatched: () => {
+    return {
+      type: 'ADMIN_AUTH_SETTING_PATCHED' as const
+    }
+  }
 }
+
+export type AuthSettingActionType = ReturnType<typeof AuthSettingAction[keyof typeof AuthSettingAction]>

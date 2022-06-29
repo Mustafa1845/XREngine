@@ -1,5 +1,5 @@
 import { HookContext } from '@feathersjs/feathers'
-import { disallow, iff, isProvider } from 'feathers-hooks-common'
+import { iff, isProvider } from 'feathers-hooks-common'
 
 import groupPermissionAuthenticate from '@xrengine/server-core/src/hooks/group-permission-authenticate'
 import groupUserPermissionAuthenticate from '@xrengine/server-core/src/hooks/group-user-permission-authenticate'
@@ -11,10 +11,10 @@ export default {
   before: {
     all: [authenticate()],
     find: [iff(isProvider('external'), groupUserPermissionAuthenticate() as any)],
-    get: [disallow('external')],
+    get: [],
     create: [iff(isProvider('external'), restrictUserRole('admin') as any)],
-    update: [disallow('external')],
-    patch: [disallow()],
+    update: [],
+    patch: [],
     remove: [groupPermissionAuthenticate()]
   },
 

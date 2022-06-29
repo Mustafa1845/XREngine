@@ -1,5 +1,5 @@
 import { pipe } from '@xrengine/common/src/utils/pipe'
-import { Application, ServerMode } from '@xrengine/server-core/declarations'
+import { Application } from '@xrengine/server-core/declarations'
 import config from '@xrengine/server-core/src/appconfig'
 import {
   configureK8s,
@@ -21,7 +21,7 @@ process.on('unhandledRejection', (error, promise) => {
 const analyticsServerPipe = pipe(configureSocketIO())
 
 export const start = async (): Promise<Application> => {
-  const app = createFeathersExpressApp(ServerMode.Instance, analyticsServerPipe)
+  const app = createFeathersExpressApp(analyticsServerPipe)
 
   app.set('host', config.server.local ? config.server.hostname + ':' + config.server.port : config.server.hostname)
   app.set('port', config.server.port)

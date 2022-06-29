@@ -1,65 +1,70 @@
 import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
 import { EmailSetting, PatchEmailSetting } from '@xrengine/common/src/interfaces/EmailSetting'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
 
-import { API } from '../../../API'
 import { NotificationService } from '../../../common/services/NotificationService'
+import { client } from '../../../feathers'
+import { store, useDispatch } from '../../../store'
 
-const AdminEmailSettingsState = defineState({
-  name: 'AdminEmailSettingsState',
-  initial: () => ({
-    email: [] as Array<EmailSetting>,
-    updateNeeded: true
-  })
+//State
+const state = createState({
+  email: [] as Array<EmailSetting>,
+  updateNeeded: true
 })
 
-const fetchedEmailReceptor = (action: typeof EmailSettingActions.fetchedEmail.matches._TYPE) => {
-  const state = getState(AdminEmailSettingsState)
-  return state.merge({ email: action.emailSettings.data, updateNeeded: false })
-}
+store.receptors.push((action: EmailSettingActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'EMAIL_SETTING_DISPLAY':
+        return s.merge({ email: action.emailSettingResult.data, updateNeeded: false })
+      case 'EMAIL_SETTING_PATCHED':
+        return s.updateNeeded.set(true)
+    }
+  }, action.type)
+})
 
-const emailSettingPatchedReceptor = (action: typeof EmailSettingActions.emailSettingPatched.matches._TYPE) => {
-  const state = getState(AdminEmailSettingsState)
-  return state.updateNeeded.set(true)
-}
+export const accessEmailSettingState = () => state
 
-export const EmailSettingReceptors = {
-  fetchedEmailReceptor,
-  emailSettingPatchedReceptor
-}
+export const useEmailSettingState = () => useState(state) as any as typeof state
 
-export const accessEmailSettingState = () => getState(AdminEmailSettingsState)
-
-export const useEmailSettingState = () => useState(accessEmailSettingState())
-
+//Service
 export const EmailSettingService = {
   fetchedEmailSettings: async (inDec?: 'increment' | 'dcrement') => {
+    const dispatch = useDispatch()
     try {
-      const emailSettings = (await API.instance.client.service('email-setting').find()) as Paginated<EmailSetting>
-      dispatchAction(EmailSettingActions.fetchedEmail({ emailSettings }))
+      const emailSettings = (await client.service('email-setting').find()) as Paginated<EmailSetting>
+      dispatch(EmailSettingAction.fetchedEmail(emailSettings))
     } catch (err) {
       console.log(err.message)
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   patchEmailSetting: async (data: PatchEmailSetting, id: string) => {
+    const dispatch = useDispatch()
+
     try {
-      await API.instance.client.service('email-setting').patch(id, data)
-      dispatchAction(EmailSettingActions.emailSettingPatched())
+      await client.service('email-setting').patch(id, data)
+      dispatch(EmailSettingAction.emailSettingPatched())
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   }
 }
 
-export class EmailSettingActions {
-  static fetchedEmail = defineAction({
-    type: 'EMAIL_SETTING_DISPLAY' as const,
-    emailSettings: matches.object as Validator<unknown, Paginated<EmailSetting>>
-  })
-  static emailSettingPatched = defineAction({
-    type: 'EMAIL_SETTING_PATCHED' as const
-  })
+//Action
+export const EmailSettingAction = {
+  fetchedEmail: (emailSettingResult: Paginated<EmailSetting>) => {
+    return {
+      type: 'EMAIL_SETTING_DISPLAY' as const,
+      emailSettingResult: emailSettingResult
+    }
+  },
+  emailSettingPatched: () => {
+    return {
+      type: 'EMAIL_SETTING_PATCHED' as const
+    }
+  }
 }
+
+export type EmailSettingActionType = ReturnType<typeof EmailSettingAction[keyof typeof EmailSettingAction]>

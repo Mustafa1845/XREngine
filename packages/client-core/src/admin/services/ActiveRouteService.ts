@@ -1,62 +1,59 @@
-import { ActiveRoutesInterface } from '@xrengine/common/src/interfaces/Route'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
+import { createState, useState } from '@speigg/hookstate'
 
-import { API } from '../../API'
+import { ActiveRoutesInterface } from '@xrengine/common/src/interfaces/Route'
+
 import { NotificationService } from '../../common/services/NotificationService'
+import { client } from '../../feathers'
+import { store, useDispatch } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
 
 //State
 export const ROUTE_PAGE_LIMIT = 10000
 
-const AdminActiveRouteState = defineState({
-  name: 'AdminActiveRouteState',
-  initial: () => ({
-    activeRoutes: [] as Array<ActiveRoutesInterface>,
-    skip: 0,
-    limit: ROUTE_PAGE_LIMIT,
-    total: 0,
-    retrieving: false,
-    fetched: false,
-    updateNeeded: true,
-    lastFetched: Date.now()
-  })
+const state = createState({
+  activeRoutes: [] as Array<ActiveRoutesInterface>,
+  skip: 0,
+  limit: ROUTE_PAGE_LIMIT,
+  total: 0,
+  retrieving: false,
+  fetched: false,
+  updateNeeded: true,
+  lastFetched: Date.now()
 })
 
-const activeRoutesRetrievedReceptor = (action: typeof AdminActiveRouteActions.activeRoutesRetrieved.matches._TYPE) => {
-  const state = getState(AdminActiveRouteState)
-  return state.merge({ activeRoutes: action.data, total: action.data.length, updateNeeded: false })
-}
+store.receptors.push((action: RouteActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'ADMIN_ROUTE_ACTIVE_RECEIVED':
+        return s.merge({ activeRoutes: action.data, total: action.data.length, updateNeeded: false })
+    }
+  }, action.type)
+})
 
-export const AdminActiveRouteReceptors = {
-  activeRoutesRetrievedReceptor
-}
+export const accessActiveRouteState = () => state
 
-export const accessAdminActiveRouteState = () => getState(AdminActiveRouteState)
-
-export const useAdminActiveRouteState = () => useState(accessAdminActiveRouteState())
+export const useActiveRouteState = () => useState(state) as any as typeof state
 
 //Service
-export const AdminActiveRouteService = {
+export const ActiveRouteService = {
   setRouteActive: async (project: string, route: string, activate: boolean) => {
     const user = accessAuthState().user
     try {
       if (user.userRole.value === 'admin') {
-        await API.instance.client.service('route-activate').create({ project, route, activate })
-        AdminActiveRouteService.fetchActiveRoutes()
+        await client.service('route-activate').create({ project, route, activate })
+        ActiveRouteService.fetchActiveRoutes()
       }
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   fetchActiveRoutes: async (incDec?: 'increment' | 'decrement') => {
+    const dispatch = useDispatch()
     const user = accessAuthState().user
     try {
       if (user.userRole.value === 'admin') {
-        const routes = await API.instance.client.service('route').find({ paginate: false })
-        dispatchAction(
-          AdminActiveRouteActions.activeRoutesRetrieved({ data: routes.data as Array<ActiveRoutesInterface> })
-        )
+        const routes = await client.service('route').find({ paginate: false })
+        dispatch(ActiveRouteActions.activeRoutesRetrievedAction(routes.data as Array<ActiveRoutesInterface>))
       }
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
@@ -65,9 +62,13 @@ export const AdminActiveRouteService = {
 }
 
 //Action
-export class AdminActiveRouteActions {
-  static activeRoutesRetrieved = defineAction({
-    type: 'ADMIN_ROUTE_ACTIVE_RECEIVED' as const,
-    data: matches.array as Validator<unknown, ActiveRoutesInterface[]>
-  })
+export const ActiveRouteActions = {
+  activeRoutesRetrievedAction: (data: Array<ActiveRoutesInterface>) => {
+    return {
+      type: 'ADMIN_ROUTE_ACTIVE_RECEIVED' as const,
+      data: data
+    }
+  }
 }
+
+export type RouteActionType = ReturnType<typeof ActiveRouteActions[keyof typeof ActiveRouteActions]>

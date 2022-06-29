@@ -55,33 +55,26 @@ interface Vector3InputProp {
   mediumStep?: number
   largeStep?: number
   value: any
-  hideLabels?: boolean
   onChange: Function
+  hideLabels?: boolean
 }
 
 /**
  *
  * @author Robert Long
  */
-export const Vector3Input = ({
-  uniformScaling,
-  smallStep,
-  mediumStep,
-  largeStep,
-  value,
-  hideLabels,
-  onChange,
-  ...rest
-}: Vector3InputProp) => {
+export const Vector3Input = (props: Vector3InputProp) => {
   const id = uniqueId++
   const newValue = new Vector3()
-  const [uniformEnabled, setUniformEnabled] = useState(uniformScaling)
+  const [uniformEnabled, setUniformEnabled] = useState(props.uniformScaling)
 
   const onToggleUniform = () => {
     setUniformEnabled(!uniformEnabled)
   }
 
-  const processChange = (field, fieldValue) => {
+  const onChange = (field, fieldValue) => {
+    const { value, onChange } = props
+
     if (uniformEnabled) {
       newValue.set(fieldValue, fieldValue, fieldValue)
     } else {
@@ -99,12 +92,13 @@ export const Vector3Input = ({
     }
   }
 
-  const onChangeX = (x) => processChange('x', x)
+  const onChangeX = (x) => onChange('x', x)
 
-  const onChangeY = (y) => processChange('y', y)
+  const onChangeY = (y) => onChange('y', y)
 
-  const onChangeZ = (z) => processChange('z', z)
+  const onChangeZ = (z) => onChange('z', z)
 
+  const { uniformScaling, value, ...rest } = props
   const vx = value ? value.x : 0
   const vy = value ? value.y : 0
   const vz = value ? value.z : 0
@@ -117,7 +111,7 @@ export const Vector3Input = ({
         value={vx}
         onChange={onChangeX}
         prefix={
-          hideLabels ? null : (
+          props.hideLabels ? null : (
             <Vector3Scrubber {...rest} tag="div" value={vx} onChange={onChangeX} axis="x">
               X
             </Vector3Scrubber>
@@ -129,7 +123,7 @@ export const Vector3Input = ({
         value={vy}
         onChange={onChangeY}
         prefix={
-          hideLabels ? null : (
+          props.hideLabels ? null : (
             <Vector3Scrubber {...rest} tag="div" value={vy} onChange={onChangeY} axis="y">
               Y
             </Vector3Scrubber>
@@ -141,7 +135,7 @@ export const Vector3Input = ({
         value={vz}
         onChange={onChangeZ}
         prefix={
-          hideLabels ? null : (
+          props.hideLabels ? null : (
             <Vector3Scrubber {...rest} tag="div" value={vz} onChange={onChangeZ} axis="z">
               Z
             </Vector3Scrubber>

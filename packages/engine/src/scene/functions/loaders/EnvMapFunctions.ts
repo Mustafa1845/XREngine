@@ -3,7 +3,6 @@ import {
   DataTexture,
   EquirectangularRefractionMapping,
   Mesh,
-  MeshMatcapMaterial,
   MeshStandardMaterial,
   Object3D,
   RGBAFormat,
@@ -32,18 +31,18 @@ import { Object3DComponent } from '../../components/Object3DComponent'
 import { EnvMapSourceType, EnvMapTextureType } from '../../constants/EnvMapEnum'
 import { getPmremGenerator, loadCubeMapTexture, textureLoader } from '../../constants/Util'
 import { SceneOptions } from '../../systems/SceneObjectSystem'
-import { EnvMapBakeTypes } from '../../types/EnvMapBakeTypes'
+import { CubemapBakeTypes } from '../../types/CubemapBakeTypes'
 import { addError, removeError } from '../ErrorFunctions'
-import { parseEnvMapBakeProperties } from './EnvMapBakeFunctions'
+import { parseCubemapBakeProperties } from './CubemapBakeFunctions'
 
 export const SCENE_COMPONENT_ENVMAP = 'envmap'
 export const SCENE_COMPONENT_ENVMAP_DEFAULT_VALUES = {
   type: EnvMapSourceType.None,
-  envMapTextureType: EnvMapTextureType.Cubemap,
+  envMapTextureType: 0,
   envMapSourceColor: 0x123456,
   envMapSourceURL: '/hdr/cubemap/skyboxsun25deg/',
   envMapIntensity: 1,
-  envMapBake: {},
+  envMapCubemapBake: {},
   forModel: true
 }
 
@@ -72,7 +71,7 @@ export const updateEnvMap: ComponentUpdateFunction = (entity: Entity, properties
     typeof properties.type !== 'undefined' ||
     typeof properties.envMapSourceColor !== 'undefined' ||
     typeof properties.envMapTextureType !== 'undefined' ||
-    typeof properties.envMapBake !== 'undefined' ||
+    typeof properties.envMapCubemapBake !== 'undefined' ||
     typeof properties.envMapSourceURL !== 'undefined'
   ) {
     switch (component.type) {
@@ -135,7 +134,7 @@ export const updateEnvMap: ComponentUpdateFunction = (entity: Entity, properties
         break
 
       case EnvMapSourceType.Default:
-        const options = component.envMapBake
+        const options = component.envMapCubemapBake
         if (!options) return
 
         if (!component.forModel) {
@@ -145,13 +144,13 @@ export const updateEnvMap: ComponentUpdateFunction = (entity: Entity, properties
 
         matchActionOnce(EngineActions.sceneLoaded.matches, () => {
           switch (options.bakeType) {
-            case EnvMapBakeTypes.Baked:
+            case CubemapBakeTypes.Baked:
               const texture = AssetLoader.Cache.get(options.envMapOrigin)
               texture.mapping = EquirectangularRefractionMapping
               applyEnvMap(obj3d, texture)
 
               break
-            case EnvMapBakeTypes.Realtime:
+            case CubemapBakeTypes.Realtime:
               // const map = new CubemapCapturer(EngineRenderer.instance.renderer, Engine.scene, options.resolution)
               // const EnvMap = (await map.update(options.bakePosition)).cubeRenderTarget.texture
               // applyEnvMap(obj3d, EnvMap)
@@ -203,7 +202,7 @@ export const serializeEnvMap: ComponentSerializeFunction = (entity) => {
       envMapSourceColor: component.envMapSourceColor.getHex(),
       envMapSourceURL: component.envMapSourceURL,
       envMapIntensity: component.envMapIntensity,
-      envMapBake: component.envMapBake,
+      envMapCubemapBake: component.envMapCubemapBake,
       forModel: component.forModel
     }
   }
@@ -216,8 +215,8 @@ const parseEnvMapProperties = (props): EnvmapComponentType => {
     envMapSourceColor: new Color(props.envMapSourceColor ?? SCENE_COMPONENT_ENVMAP_DEFAULT_VALUES.envMapSourceColor),
     envMapSourceURL: props.envMapSourceURL ?? SCENE_COMPONENT_ENVMAP_DEFAULT_VALUES.envMapSourceURL,
     envMapIntensity: props.envMapIntensity ?? SCENE_COMPONENT_ENVMAP_DEFAULT_VALUES.envMapIntensity,
-    envMapBake: parseEnvMapBakeProperties({
-      options: props.envMapBake ?? SCENE_COMPONENT_ENVMAP_DEFAULT_VALUES.envMapBake
+    envMapCubemapBake: parseCubemapBakeProperties({
+      options: props.envMapCubemapBake ?? SCENE_COMPONENT_ENVMAP_DEFAULT_VALUES.envMapCubemapBake
     }).options,
     forModel: Boolean(props.forModel)
   }
@@ -230,12 +229,10 @@ function applyEnvMap(obj3d: Object3D, envmap) {
     obj3d.environment = envmap
   } else {
     obj3d.traverse((child: Mesh<any, MeshStandardMaterial>) => {
-      if (child.material instanceof MeshMatcapMaterial) return
       if (child.material) child.material.envMap = envmap
     })
 
     if ((obj3d as Mesh<any, MeshStandardMaterial>).material) {
-      if ((obj3d as Mesh).material instanceof MeshMatcapMaterial) return
       ;(obj3d as Mesh<any, MeshStandardMaterial>).material.envMap = envmap
     }
   }

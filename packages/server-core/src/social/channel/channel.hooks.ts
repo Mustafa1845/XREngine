@@ -45,7 +45,6 @@ export default {
       })
     ],
     get: [
-      disallow('external'),
       addAssociations({
         models: [
           {
@@ -80,7 +79,7 @@ export default {
     create: [disallow('external')],
     update: [disallow('external')],
     patch: [disallow('external')],
-    remove: [disallow('external')]
+    remove: []
   },
 
   after: {

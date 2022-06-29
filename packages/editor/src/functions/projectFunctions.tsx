@@ -1,8 +1,10 @@
-import { API } from '@xrengine/client-core/src/API'
+import { client } from '@xrengine/client-core/src/feathers'
+import { store } from '@xrengine/client-core/src/store'
 import { MultiError } from '@xrengine/client-core/src/util/errors'
 import { ProjectInterface } from '@xrengine/common/src/interfaces/ProjectInterface'
 import { SceneJson } from '@xrengine/common/src/interfaces/SceneInterface'
 import { AnimationManager } from '@xrengine/engine/src/avatar/AnimationManager'
+import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { EngineActions } from '@xrengine/engine/src/ecs/classes/EngineState'
 import TransformGizmo from '@xrengine/engine/src/scene/classes/TransformGizmo'
 import { dispatchAction } from '@xrengine/hyperflux'
@@ -24,7 +26,7 @@ import { disposeScene, initializeScene } from './sceneRenderFunctions'
  */
 export const getProjects = async (): Promise<ProjectInterface[]> => {
   try {
-    const { data } = await API.instance.client.service('project').find()
+    const { data } = await client.service('project').find()
     return data
   } catch (error) {
     throw new Error(error)
@@ -38,11 +40,11 @@ export async function runPreprojectLoadTasks(): Promise<void> {
   const editorState = accessEditorState()
 
   if (editorState.preprojectLoadTaskStatus.value === TaskStatus.NOT_STARTED) {
-    dispatchAction(EditorAction.updatePreprojectLoadTask({ taskStatus: TaskStatus.IN_PROGRESS }))
+    store.dispatch(EditorAction.updatePreprojectLoadTask(TaskStatus.IN_PROGRESS))
 
     await Promise.all([ErrorIcon.load(), TransformGizmo.load(), AnimationManager.instance.loadDefaultAnimations()])
 
-    dispatchAction(EditorAction.updatePreprojectLoadTask({ taskStatus: TaskStatus.COMPLETED }))
+    store.dispatch(EditorAction.updatePreprojectLoadTask(TaskStatus.COMPLETED))
   }
 }
 
@@ -63,12 +65,12 @@ export async function loadProjectScene(projectFile: SceneJson) {
   disposePlayModeControls()
   const errors = await initializeScene(projectFile)
 
-  dispatchAction(EditorAction.projectLoaded({ loaded: true }))
-  dispatchAction(SelectionAction.changedSceneGraph())
+  store.dispatch(EditorAction.projectLoaded(true))
+  store.dispatch(SelectionAction.changedSceneGraph())
 
   if (errors && errors.length > 0) {
     const error = new MultiError('Errors loading project', errors)
-    dispatchAction(EditorErrorAction.throwError({ error }))
+    store.dispatch(EditorErrorAction.throwError(error))
     throw error
   }
 
@@ -83,7 +85,7 @@ export function disposeProject() {
   disposeScene()
   removeInputEvents()
   disposePlayModeControls()
-  dispatchAction(EditorAction.projectLoaded({ loaded: false }))
+  store.dispatch(EditorAction.projectLoaded(false))
 
   window.addEventListener('copy', copy)
   window.addEventListener('paste', paste)

@@ -19,13 +19,13 @@ const authoritativeNetworkTransformsQuery = defineQuery([
 const serializeAndSend = (world: World, serialize: Function) => {
   const ents = authoritativeNetworkTransformsQuery(world)
   if (ents.length > 0) {
-    const data = serialize(world, world.worldNetwork, ents)
+    const data = serialize(world, ents)
 
     // todo: insert historian logic here
 
     if (data.byteLength > 0) {
       // side effect - network IO
-      world.worldNetwork.sendData(data)
+      world.worldNetwork?.sendData(data)
     }
   }
 }
@@ -34,6 +34,6 @@ export default async function OutgoingNetworkSystem(world: World) {
   const serialize = createDataWriter()
 
   return () => {
-    world.worldNetwork && serializeAndSend(world, serialize)
+    serializeAndSend(world, serialize)
   }
 }

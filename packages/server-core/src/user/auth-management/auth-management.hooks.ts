@@ -1,4 +1,4 @@
-import { disallow, iff } from 'feathers-hooks-common'
+import { iff } from 'feathers-hooks-common'
 
 import isAction from '@xrengine/server-core/src/hooks/is-action'
 
@@ -7,12 +7,12 @@ import authenticate from '../../hooks/authenticate'
 export default {
   before: {
     all: [],
-    find: [disallow()],
-    get: [disallow()],
+    find: [],
+    get: [],
     create: [iff(isAction('passwordChange', 'identityChange'), authenticate() as any)],
-    update: [disallow()],
-    patch: [disallow()],
-    remove: [disallow()]
+    update: [],
+    patch: [],
+    remove: []
   },
 
   after: {

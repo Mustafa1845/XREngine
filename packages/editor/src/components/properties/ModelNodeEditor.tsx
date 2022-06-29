@@ -34,7 +34,6 @@ import ModelInput from '../inputs/ModelInput'
 import SelectInput from '../inputs/SelectInput'
 import EnvMapEditor from './EnvMapEditor'
 import NodeEditor from './NodeEditor'
-import ScreenshareTargetNodeEditor from './ScreenshareTargetNodeEditor'
 import ShadowProperties from './ShadowProperties'
 import { EditorComponentType, updateProperty } from './Util'
 
@@ -90,7 +89,7 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
     if (node.entity === entity) return
 
     textureOverrideEntities.push({
-      label: hasComponent(node.entity, NameComponent) ? getComponent(node.entity, NameComponent).name : node.uuid,
+      label: getComponent(node.entity, NameComponent).name,
       value: node.uuid
     })
   })
@@ -117,23 +116,19 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
           onChange={updateProperty(ModelComponent, 'textureOverride')}
         />
       </InputGroup>
-      <MaterialAssignment
-        entity={entity}
-        node={props.node}
-        modelComponent={modelComponent}
-        values={modelComponent.materialOverrides}
-        onChange={updateProperty(ModelComponent, 'materialOverrides')}
-      />
+      <InputGroup name="Material Override" label={t('editor:properties.model.lbl-materialOverride')}>
+        <MaterialAssignment
+          entity={entity}
+          node={props.node}
+          modelComponent={modelComponent}
+          values={modelComponent.materialOverrides}
+          onChange={updateProperty(ModelComponent, 'materialOverrides')}
+        />
+      </InputGroup>
       <InputGroup name="MatrixAutoUpdate" label={t('editor:properties.model.lbl-matrixAutoUpdate')}>
         <BooleanInput
           value={modelComponent.matrixAutoUpdate}
           onChange={updateProperty(ModelComponent, 'matrixAutoUpdate')}
-        />
-      </InputGroup>
-      <InputGroup name="Use Basic Materials" label={t('editor:properties.model.lbl-useBasicMaterials')}>
-        <BooleanInput
-          value={modelComponent.useBasicMaterial}
-          onChange={updateProperty(ModelComponent, 'useBasicMaterial')}
         />
       </InputGroup>
       <InputGroup name="Is Using GPU Instancing" label={t('editor:properties.model.lbl-isGPUInstancing')}>
@@ -170,7 +165,6 @@ export const ModelNodeEditor: EditorComponentType = (props) => {
         <BooleanInput value={isInteractable} onChange={onChangeInteractable} />
       </InputGroup>
       {isInteractable && <InteractableGroup node={props.node}></InteractableGroup>}
-      <ScreenshareTargetNodeEditor node={props.node} multiEdit={props.multiEdit} />
       <EnvMapEditor node={props.node} />
       <ShadowProperties node={props.node} />
     </NodeEditor>

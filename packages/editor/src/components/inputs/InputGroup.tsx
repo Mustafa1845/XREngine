@@ -150,7 +150,19 @@ type InputGroupPropType = React.PropsWithChildren<
   } & Partial<InputGroupInfoProp>
 >
 
-function BaseInputGroup({ name, children, disabled, label, ...rest }: InputGroupPropType) {
+/**
+ * InputGroup used to render the view of component.
+ *
+ * @author Robert Long
+ * @param       {string} name
+ * @param       {any} children
+ * @param       {boolean} disabled
+ * @param       {string} info
+ * @param       {any} rest
+ * @param       {string} label
+ * @constructor
+ */
+export function InputGroup({ name, children, disabled, info, label, ...rest }: InputGroupPropType) {
   return (
     <InputGroupContainer disabled={disabled} {...rest}>
       <Grid container spacing="10px">
@@ -166,35 +178,14 @@ function BaseInputGroup({ name, children, disabled, label, ...rest }: InputGroup
           </InfoTooltip>
         </Grid>
         <Grid item xs={9}>
-          <InputGroupContent>{children}</InputGroupContent>
+          <InputGroupContent>
+            {children}
+            {info && <InputGroupInfo info={info} />}
+          </InputGroupContent>
         </Grid>
       </Grid>
     </InputGroupContainer>
   )
-}
-/**
- * InputGroup used to render the view of component.
- *
- * @author Robert Long
- * @author David Gordon
- * @param       {string} name
- * @param       {any} children
- * @param       {boolean} disabled
- * @param       {string} info
- * @param       {any} rest
- * @param       {string} label
- * @constructor
- */
-export function InputGroup({ name, children, disabled, info, label, ...rest }: InputGroupPropType) {
-  if (!info) {
-    return <BaseInputGroup children={children} name={name} disabled={disabled} label={label} {...rest} />
-  } else {
-    return (
-      <InfoTooltip title={info}>
-        <BaseInputGroup children={children} name={name} disabled={disabled} label={label} {...rest} />
-      </InfoTooltip>
-    )
-  }
 }
 
 export default InputGroup

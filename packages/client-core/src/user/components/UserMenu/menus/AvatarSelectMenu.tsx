@@ -34,11 +34,12 @@ import { Views } from '../util'
 import { addAnimationLogic, initialize3D, onWindowResize, validate } from './helperFunctions'
 
 interface Props {
-  avatarData?: AvatarInterface
-  isPublicAvatar?: boolean
-  adminStyles?: any
   changeActiveMenu: Function
   onAvatarUpload?: () => void
+  avatarData?: AvatarInterface
+  uploadAvatarModel?: Function
+  isPublicAvatar?: boolean
+  adminStyles?: any
 }
 
 let camera: PerspectiveCamera
@@ -63,26 +64,23 @@ interface TabPanelProps {
   value: number
 }
 
-function TabPanel({ children, value, index }: TabPanelProps) {
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props
+
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
+      {...other}
     >
       {value === index && children}
     </div>
   )
 }
 
-export const AvatarUploadModal = ({
-  avatarData,
-  isPublicAvatar,
-  adminStyles,
-  changeActiveMenu,
-  onAvatarUpload
-}: Props) => {
+export const AvatarUploadModal = (props: Props) => {
   const [selectedFile, setSelectedFile] = useState<any>(null)
   const [selectedThumbnail, setSelectedThumbnail] = useState<any>(null)
   const [avatarName, setAvatarName] = useState('')
@@ -150,6 +148,8 @@ export const AvatarUploadModal = ({
       setValidAvatarUrl(false)
     }
   }
+
+  const { isPublicAvatar, changeActiveMenu, avatarData, onAvatarUpload } = props
 
   const [fileSelected, setFileSelected] = useState(false)
 
@@ -273,7 +273,7 @@ export const AvatarUploadModal = ({
 
   const uploadButtonEnabled = !!fileSelected && !error && avatarName.length > 3
 
-  const styling = adminStyles || styles
+  const styling = props.adminStyles || styles
 
   return (
     <div ref={panelRef} className={styling.avatarUploadPanel}>

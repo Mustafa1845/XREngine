@@ -9,6 +9,7 @@ import {
 import { accessAuthState } from '@xrengine/client-core/src/user/services/AuthService'
 import { useUserState } from '@xrengine/client-core/src/user/services/UserService'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
+import { MediaStreams } from '@xrengine/engine/src/networking/systems/MediaStreamSystem'
 
 import PartyParticipantWindow from '../PartyParticipantWindow'
 
@@ -31,9 +32,9 @@ const PartyVideoWindows = (): JSX.Element => {
 
   return (
     <>
-      <PartyParticipantWindow peerId={'cam_me'} key={'cam_me'} />
+      <PartyParticipantWindow peerId={'me_cam'} />
       {(mediaState.isScreenAudioEnabled.value || mediaState.isScreenVideoEnabled.value) && (
-        <PartyParticipantWindow peerId={'screen_me'} key={'screen_me'} />
+        <PartyParticipantWindow peerId={'me_screen'} />
       )}
       {displayedUsers.map((user) => (
         <>

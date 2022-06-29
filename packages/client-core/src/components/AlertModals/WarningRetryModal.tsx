@@ -13,12 +13,12 @@ export interface WarningRetryModalProps {
   open: boolean
   title: string
   body: string
+  handleClose?: (event?: any, reason?: 'backdropClick' | 'escapeKeyDown' | 'closeButtonClicked' | 'timeout') => void
   action?: (...params: any[]) => void
   parameters?: any[]
   timeout?: number
   closeEffect?: () => void
   noCountdown?: boolean
-  onClose: (event?: any, reason?: 'backdropClick' | 'escapeKeyDown' | 'closeButtonClicked' | 'timeout') => void
 }
 
 const WarningRetryModal = ({
@@ -29,13 +29,15 @@ const WarningRetryModal = ({
   action,
   parameters = [],
   timeout = 10000,
-  closeEffect,
-  onClose
+  handleClose,
+  closeEffect
 }: WarningRetryModalProps): any => {
   const [timeRemaining, setTimeRemaining] = useState(0)
   const { t } = useTranslation()
   const handleCloseButtonClick = (e: any) => {
-    onClose(e, 'closeButtonClicked')
+    if (typeof handleClose === 'function') {
+      handleClose(e, 'closeButtonClicked')
+    }
 
     if (typeof closeEffect === 'function') {
       closeEffect()
@@ -53,7 +55,9 @@ const WarningRetryModal = ({
         action(...(parameters || []))
       }
 
-      onClose({}, 'timeout')
+      if (typeof handleClose === 'function') {
+        handleClose({}, 'timeout')
+      }
     }
 
     let timeout = undefined! as number
@@ -75,7 +79,7 @@ const WarningRetryModal = ({
         open={open}
         onClose={(event, reason) => {
           if (reason === 'backdropClick' && typeof closeEffect === 'function') closeEffect()
-          else onClose(event, reason)
+          else if (typeof handleClose === 'function') handleClose(event, reason)
         }}
         closeAfterTransition
       >

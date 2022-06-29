@@ -14,7 +14,6 @@ import ImageInput from '../inputs/ImageInput'
 import InputGroup from '../inputs/InputGroup'
 import ImageSourceProperties from './ImageSourceProperties'
 import NodeEditor from './NodeEditor'
-import ScreenshareTargetNodeEditor from './ScreenshareTargetNodeEditor'
 import { EditorComponentType, updateProperty } from './Util'
 
 export const ImageNodeEditor: EditorComponentType = (props) => {
@@ -43,7 +42,6 @@ export const ImageNodeEditor: EditorComponentType = (props) => {
         </InputGroup>
       )}
       <ImageSourceProperties node={props.node} multiEdit={props.multiEdit} />
-      <ScreenshareTargetNodeEditor node={props.node} multiEdit={props.multiEdit} />
     </NodeEditor>
   )
 }

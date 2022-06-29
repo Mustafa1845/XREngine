@@ -4,13 +4,8 @@ import { useTranslation } from 'react-i18next'
 import InfiniteScroll from 'react-infinite-scroller'
 
 import ConfirmModal from '@xrengine/client-core/src/admin/common/ConfirmModal'
-import {
-  FileBrowserService,
-  FileBrowserServiceReceptor,
-  useFileBrowserState
-} from '@xrengine/client-core/src/common/services/FileBrowserService'
+import { FileBrowserService, useFileBrowserState } from '@xrengine/client-core/src/common/services/FileBrowserService'
 import { ScenePrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
-import { addActionReceptor, removeActionReceptor } from '@xrengine/hyperflux'
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
@@ -88,7 +83,7 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
   const [fileProperties, setFileProperties] = useState<any>(null)
   const [files, setFiles] = useState<FileDataType[]>([])
   const [openPropertiesConfirmModal, setOpenPropertiesModal] = useState(false)
-  const [openConfirm, setOpenConfirm] = useState(false)
+  const [openConfirmModal, setConfirmModal] = useState(false)
   const [contentToDeletePath, setContentToDeletePath] = useState('')
   const [contentToDeleteType, setContentToDeleteType] = useState('')
 
@@ -118,13 +113,6 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
       }
     })
 
-  useEffect(() => {
-    addActionReceptor(FileBrowserServiceReceptor)
-    return () => {
-      removeActionReceptor(FileBrowserServiceReceptor)
-    }
-  }, [])
-
   const onSelect = (params: FileDataType) => {
     if (params.type !== 'folder') {
       props.onSelectionChanged({
@@ -141,25 +129,6 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
   useEffect(() => {
     setLoading(false)
   }, [filesValue])
-
-  useEffect(() => {
-    setFiles(
-      fileState.files.value.map((file) => {
-        const prefabType = PrefabFileType[file.type]
-        const isFolder = file.type === 'folder'
-        const fullName = isFolder ? file.name : file.name + '.' + file.type
-
-        return {
-          ...file,
-          path: isFolder ? file.key.split(file.name)[0] : file.key.split(fullName)[0],
-          fullName,
-          isFolder,
-          prefabType,
-          Icon: prefabIcons[prefabType]
-        }
-      })
-    )
-  }, [fileState])
 
   useEffect(() => {
     onRefreshDirectory()
@@ -198,6 +167,23 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
 
   const onRefreshDirectory = async () => {
     await FileBrowserService.fetchFiles(selectedDirectory)
+
+    setFiles(
+      fileState.files.value.map((file) => {
+        const prefabType = PrefabFileType[file.type]
+        const isFolder = file.type === 'folder'
+        const fullName = isFolder ? file.name : file.name + '.' + file.type
+
+        return {
+          ...file,
+          path: isFolder ? file.key.split(file.name)[0] : file.key.split(fullName)[0],
+          fullName,
+          isFolder,
+          prefabType,
+          Icon: prefabIcons[prefabType]
+        }
+      })
+    )
   }
 
   const onBackDirectory = () => {
@@ -225,21 +211,21 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
   }
 
   const handleConfirmDelete = (contentPath: string, type: string) => {
+    setConfirmModal(true)
     setContentToDeletePath(contentPath)
     setContentToDeleteType(type)
-    setOpenConfirm(true)
   }
 
-  const handleConfirmClose = () => {
+  const handleCloseModal = () => {
+    setConfirmModal(false)
     setContentToDeletePath('')
     setContentToDeleteType('')
-    setOpenConfirm(false)
   }
 
   const deleteContent = async (): Promise<void> => {
     if (isLoading) return
     setLoading(true)
-    setOpenConfirm(false)
+    setConfirmModal(false)
     await FileBrowserService.deleteContent(contentToDeletePath, contentToDeleteType)
     props.onSelectionChanged({ resourceUrl: '', name: '', contentType: '' })
     await onRefreshDirectory()
@@ -289,12 +275,7 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
   return (
     <>
       <div style={headGrid}>
-        <ToolButton
-          tooltip={t('editor:layout.filebrowser.back')}
-          icon={ArrowBackIcon}
-          onClick={onBackDirectory}
-          id="backDir"
-        />
+        <ToolButton icon={ArrowBackIcon} onClick={onBackDirectory} id="backDir" />
         <Breadcrumbs
           maxItems={3}
           classes={{ separator: styles.separator, li: styles.breadcrumb }}
@@ -303,12 +284,7 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
         >
           {breadcrumbs}
         </Breadcrumbs>
-        <ToolButton
-          tooltip={t('editor:layout.filebrowser.refresh')}
-          icon={AutorenewIcon}
-          onClick={onRefreshDirectory}
-          id="refreshDir"
-        />
+        <ToolButton icon={AutorenewIcon} onClick={onRefreshDirectory} id="refreshDir" />
       </div>
 
       <ContextMenuTrigger id={'uniqueId_current'} holdToDisplay={-1}>
@@ -373,12 +349,11 @@ const FileBrowserContentPanel: React.FC<FileBrowserContentPanelProps> = (props) 
         </Dialog>
       )}
       <ConfirmModal
-        open={openConfirm}
-        description={`${t('editor:dialog.confirmContentDelete')} ${
-          contentToDeleteType == 'folder' ? t('editor:dialog.folder') : t('editor:dialog.file')
-        }?`}
-        onClose={handleConfirmClose}
-        onSubmit={deleteContent}
+        popConfirmOpen={openConfirmModal}
+        handleCloseModal={handleCloseModal}
+        submit={deleteContent}
+        name={''}
+        label={`this ${contentToDeleteType == 'folder' ? 'folder' : 'file'}`}
       />
     </>
   )

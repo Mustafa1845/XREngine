@@ -12,10 +12,8 @@ import {
 import { createEngine } from '@xrengine/engine/src/initializeEngine'
 import { SelectTagComponent } from '@xrengine/engine/src/scene/components/SelectTagComponent'
 import { registerPrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
-import { applyIncomingActions } from '@xrengine/hyperflux'
 
 import EditorCommands from '../constants/EditorCommands'
-import { deregisterEditorReceptors, registerEditorReceptors } from '../services/EditorServicesReceptor'
 import { accessSelectionState } from '../services/SelectionServices'
 import { ToggleSelectionCommand, ToggleSelectionCommandParams } from './ToggleSelectionCommand'
 
@@ -26,8 +24,6 @@ describe('ToggleSelectionCommand', () => {
 
   beforeEach(() => {
     createEngine()
-    registerEditorReceptors()
-    Engine.instance.store.defaultDispatchDelay = 0
     registerPrefabs(Engine.instance.currentWorld)
 
     rootNode = createEntityNode(createEntity())
@@ -75,7 +71,6 @@ describe('ToggleSelectionCommand', () => {
       const beforeSelectionChangeCounter = selectionState.beforeSelectionChangeCounter.value
 
       ToggleSelectionCommand.emitEventBefore?.(command)
-      applyIncomingActions()
       assert.equal(beforeSelectionChangeCounter, selectionState.beforeSelectionChangeCounter.value)
     })
 
@@ -85,7 +80,6 @@ describe('ToggleSelectionCommand', () => {
       const beforeSelectionChangeCounter = selectionState.beforeSelectionChangeCounter.value
 
       ToggleSelectionCommand.emitEventBefore?.(command)
-      applyIncomingActions()
       assert.equal(beforeSelectionChangeCounter + 1, selectionState.beforeSelectionChangeCounter.value)
     })
   })
@@ -97,14 +91,12 @@ describe('ToggleSelectionCommand', () => {
       const sceneGraphChangeCounter = selectionState.sceneGraphChangeCounter.value
 
       ToggleSelectionCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert.equal(sceneGraphChangeCounter, selectionState.sceneGraphChangeCounter.value)
     })
 
     it('will emit event if "preventEvents" is false', () => {
       command.preventEvents = false
       ToggleSelectionCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert(true)
     })
   })
@@ -114,7 +106,6 @@ describe('ToggleSelectionCommand', () => {
       command.affectedNodes = nodes
       const oldSelection = accessSelectionState().selectedEntities.value.slice(0)
       ToggleSelectionCommand.execute(command)
-      applyIncomingActions()
       const newSelection = accessSelectionState().selectedEntities.value
 
       command.affectedNodes.forEach((node, i) => {
@@ -129,11 +120,9 @@ describe('ToggleSelectionCommand', () => {
       command.keepHistory = false
       ToggleSelectionCommand.prepare(command)
       ToggleSelectionCommand.execute(command)
-      applyIncomingActions()
 
       const oldSelection = accessSelectionState().selectedEntities.value.slice(0)
       ToggleSelectionCommand.undo(command)
-      applyIncomingActions()
       const newSelection = accessSelectionState().selectedEntities.value
 
       command.affectedNodes.forEach((node, i) => {
@@ -146,10 +135,8 @@ describe('ToggleSelectionCommand', () => {
       command.keepHistory = true
       ToggleSelectionCommand.prepare(command)
       ToggleSelectionCommand.execute(command)
-      applyIncomingActions()
 
       ToggleSelectionCommand.undo(command)
-      applyIncomingActions()
 
       const selection = accessSelectionState().selectedEntities.value
       assert.equal(selection.length, command.undo?.selection.length)
@@ -167,6 +154,5 @@ describe('ToggleSelectionCommand', () => {
   afterEach(() => {
     emptyEntityTree(Engine.instance.currentWorld.entityTree)
     accessSelectionState().merge({ selectedEntities: [] })
-    deregisterEditorReceptors()
   })
 })

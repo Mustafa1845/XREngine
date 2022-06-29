@@ -65,9 +65,9 @@
         {
           "name": "envmap",
           "props": {
-            "type": "Texture",
+            "type": 1,
             "envMapIntensity": 1,
-            "envMapTextureType": "Cubemap",
+            "envMapTextureType": 0,
             "envMapSourceURL": "/hdr/cubemap/Bridge2/"
           }
         }

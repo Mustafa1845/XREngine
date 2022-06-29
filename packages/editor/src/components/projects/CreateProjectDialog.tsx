@@ -11,23 +11,24 @@ import styles from './styles.module.scss'
 
 interface Props {
   open: boolean
-  onSuccess: (name: string) => Promise<void>
-  onClose: () => void
+  handleClose: any
+  createProject: (name: string) => Promise<void>
 }
 
-export const CreateProjectDialog = ({ open, onSuccess, onClose }: Props): any => {
+export const CreateProjectDialog = (props: Props): any => {
   const { t } = useTranslation()
+  const { open, handleClose, createProject } = props
 
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
   const [projectName, setProjectName] = useState('')
 
-  const handleCreateProject = async () => {
+  const onCreateProject = async () => {
     if (!projectName) return
 
     setProcessing(true)
     try {
-      await onSuccess(projectName)
+      await createProject(projectName)
       closeDialog()
     } catch (err) {
       setError(err.message)
@@ -38,13 +39,13 @@ export const CreateProjectDialog = ({ open, onSuccess, onClose }: Props): any =>
 
   const handleSubmitOnEnter = (event) => {
     if (event.key === 'Enter') {
-      handleCreateProject()
+      onCreateProject()
     }
   }
 
   const closeDialog = () => {
     setProjectName('')
-    onClose()
+    handleClose()
   }
 
   return (
@@ -54,7 +55,7 @@ export const CreateProjectDialog = ({ open, onSuccess, onClose }: Props): any =>
       onClose={closeDialog}
       closeAfterTransition
       TransitionComponent={Fade}
-      TransitionProps={{ in: open }}
+      TransitionProps={{ in: props.open }}
     >
       <DialogTitle>{t('editor.projects.createProject')}</DialogTitle>
       <DialogContent>
@@ -82,7 +83,7 @@ export const CreateProjectDialog = ({ open, onSuccess, onClose }: Props): any =>
               onKeyDown={handleSubmitOnEnter}
             />
             {error && error.length > 0 && <h2 className={styles.errorMessage}>{error}</h2>}
-            <Button onClick={handleCreateProject} className={styles.btn} disabled={!projectName}>
+            <Button onClick={onCreateProject} className={styles.btn} disabled={!projectName}>
               {t('editor.projects.lbl-createProject')}
             </Button>
           </FormControl>
