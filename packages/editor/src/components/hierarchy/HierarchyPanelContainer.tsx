@@ -150,10 +150,10 @@ export default function HierarchyPanel() {
   const onMouseDown = useCallback((e: MouseEvent, node: HeirarchyTreeNodeType) => {
     if (e.detail === 1) {
       if (e.shiftKey) {
-        executeCommandWithHistory({ type: EditorCommands.TOGGLE_SELECTION, affectedNodes: [node.entityNode] })
+        executeCommandWithHistory(EditorCommands.TOGGLE_SELECTION, node.entityNode)
         setSelectedNode(null)
       } else if (!node.selected) {
-        executeCommandWithHistory({ type: EditorCommands.REPLACE_SELECTION, affectedNodes: [node.entityNode] })
+        executeCommandWithHistory(EditorCommands.REPLACE_SELECTION, node.entityNode)
         setSelectedNode(node)
       }
     }
@@ -187,7 +187,7 @@ export default function HierarchyPanel() {
           if (!nextNode) return
 
           if (e.shiftKey) {
-            executeCommandWithHistory({ type: EditorCommands.ADD_TO_SELECTION, affectedNodes: [nextNode.entityNode] })
+            executeCommandWithHistory(EditorCommands.ADD_TO_SELECTION, nextNode.entityNode)
           }
 
           const nextNodeEl = document.getElementById(getNodeElId(nextNode))
@@ -201,7 +201,7 @@ export default function HierarchyPanel() {
           if (!prevNode) return
 
           if (e.shiftKey) {
-            executeCommandWithHistory({ type: EditorCommands.ADD_TO_SELECTION, affectedNodes: [prevNode.entityNode] })
+            executeCommandWithHistory(EditorCommands.ADD_TO_SELECTION, prevNode.entityNode)
           }
 
           const prevNodeEl = document.getElementById(getNodeElId(prevNode))
@@ -224,10 +224,10 @@ export default function HierarchyPanel() {
 
         case 'Enter':
           if (e.shiftKey) {
-            executeCommandWithHistory({ type: EditorCommands.TOGGLE_SELECTION, affectedNodes: [node.entityNode] })
+            executeCommandWithHistory(EditorCommands.TOGGLE_SELECTION, node.entityNode)
             setSelectedNode(null)
           } else {
-            executeCommandWithHistory({ type: EditorCommands.REPLACE_SELECTION, affectedNodes: [node.entityNode] })
+            executeCommandWithHistory(EditorCommands.REPLACE_SELECTION, node.entityNode)
             setSelectedNode(node)
           }
           break
@@ -242,20 +242,18 @@ export default function HierarchyPanel() {
   )
 
   const onDeleteNode = useCallback((_, node: HeirarchyTreeNodeType) => {
-    let objs = node.selected ? getEntityNodeArrayFromEntities(selectionState.selectedEntities.value) : [node.entityNode]
-    executeCommandWithHistory({ type: EditorCommands.REMOVE_OBJECTS, affectedNodes: objs })
+    let objs = node.selected ? getEntityNodeArrayFromEntities(selectionState.selectedEntities.value) : node.entityNode
+    executeCommandWithHistory(EditorCommands.REMOVE_OBJECTS, objs, { deselectObject: true })
   }, [])
 
   const onDuplicateNode = useCallback((_, node: HeirarchyTreeNodeType) => {
-    let objs = node.selected ? getEntityNodeArrayFromEntities(selectionState.selectedEntities.value) : [node.entityNode]
-    executeCommandWithHistory({ type: EditorCommands.DUPLICATE_OBJECTS, affectedNodes: objs })
+    let objs = node.selected ? getEntityNodeArrayFromEntities(selectionState.selectedEntities.value) : node.entityNode
+    executeCommandWithHistory(EditorCommands.DUPLICATE_OBJECTS, objs)
   }, [])
 
   const onGroupNodes = useCallback((_, node: HeirarchyTreeNodeType) => {
-    const objs = node.selected
-      ? getEntityNodeArrayFromEntities(selectionState.selectedEntities.value)
-      : [node.entityNode]
-    executeCommandWithHistory({ type: EditorCommands.GROUP, affectedNodes: objs })
+    const objs = node.selected ? getEntityNodeArrayFromEntities(selectionState.selectedEntities.value) : node.entityNode
+    executeCommandWithHistory(EditorCommands.GROUP, objs)
   }, [])
   /* Event handlers */
 
@@ -272,10 +270,9 @@ export default function HierarchyPanel() {
 
   const onRenameSubmit = useCallback((node: HeirarchyTreeNodeType, name: string) => {
     if (name) {
-      setPropertyOnEntityNode({
-        affectedNodes: [node.entityNode],
+      setPropertyOnEntityNode(node.entityNode, {
         component: NameComponent,
-        properties: [{ name }]
+        properties: { name }
       })
 
       const obj3d = getComponent(node.entityNode.entity, Object3DComponent)?.value
@@ -315,10 +312,8 @@ export default function HierarchyPanel() {
         return
       }
 
-      executeCommandWithHistory({
-        type: EditorCommands.REPARENT,
-        affectedNodes: [item.value],
-        parents: [Engine.instance.currentWorld.entityTree.rootNode]
+      executeCommandWithHistory(EditorCommands.REPARENT, item.value, {
+        parents: useWorld().entityTree.rootNode
       })
     },
     canDrop(item: any, monitor) {

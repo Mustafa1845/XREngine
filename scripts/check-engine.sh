@@ -1,6 +1,6 @@
 apiName="${RELEASE_NAME}-xrengine-api"
 clientName="${RELEASE_NAME}-xrengine-client"
-instanceserverName="${RELEASE_NAME}-instanceserver"
+gamesvrName="${RELEASE_NAME}-gameserver"
 
 apiCount=$(kubectl get deploy $apiName -o jsonpath='{.status.availableReplicas}')
 echo "API ready count: $apiCount"
@@ -26,16 +26,16 @@ do
     echo "Client ready count: $clientCount"
 done
 
-instanceserverCount=$(kubectl get fleet $instanceserverName -o jsonpath='{.status.readyReplicas}')
-echo "Instanceserver ready count: $instanceserverCount"
+gamesvrCount=$(kubectl get fleet $gamesvrName -o jsonpath='{.status.readyReplicas}')
+echo "Gameserver ready count: $gamesvrCount"
 
-# Wait until instanceserver count is 1.
-until [ $instanceserverCount -ge 1 ]
+# Wait until gamesvr count is 1.
+until [ $gamesvrCount -ge 1 ]
 do
     sleep 5
 
-    instanceserverCount=$(kubectl get fleet $instanceserverName -o jsonpath='{.status.readyReplicas}')
-    echo "Instanceserver ready count: $instanceserverCount"
+    gamesvrCount=$(kubectl get fleet $gamesvrName -o jsonpath='{.status.readyReplicas}')
+    echo "Gameserver ready count: $gamesvrCount"
 done
 
 echo "XREngine is now ready"

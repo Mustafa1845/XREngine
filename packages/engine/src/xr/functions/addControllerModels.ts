@@ -5,7 +5,8 @@ import {
   Mesh,
   MeshBasicMaterial,
   RingGeometry,
-  SphereGeometry
+  SphereGeometry,
+  XRInputSource
 } from 'three'
 
 import { AssetLoader } from '../../assets/classes/AssetLoader'

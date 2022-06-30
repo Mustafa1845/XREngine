@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AdminScopeType } from '@xrengine/common/src/interfaces/AdminScopeType'
@@ -12,11 +12,12 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import Drawer from '@mui/material/Drawer'
 
+import { useAlertState } from '../../../common/services/AlertService'
 import { useAuthState } from '../../../user/services/AuthService'
 import AlertMessage from '../../common/AlertMessage'
 import AutoComplete from '../../common/AutoComplete'
 import { useFetchScopeType, useFetchStaticResource, useFetchUserRole } from '../../common/hooks/User.hooks'
-import InputSelect, { InputSelectProps } from '../../common/InputSelect'
+import InputSelect from '../../common/InputSelect'
 import InputText from '../../common/InputText'
 import { validateForm } from '../../common/validation/formValidation'
 import { ScopeTypeService, useScopeTypeState } from '../../services/ScopeTypeService'
@@ -30,6 +31,11 @@ interface Props {
   open: boolean
   handleClose: (open: boolean) => void
   closeViewModal: (open: boolean) => void
+}
+
+interface InputSelectProps {
+  value: string
+  label: string
 }
 
 const CreateUser = (props: Props) => {
@@ -58,6 +64,9 @@ const CreateUser = (props: Props) => {
   const staticResourceData = staticResource.staticResource
 
   const adminScopeTypeState = useScopeTypeState()
+  const alertState = useAlertState()
+  const errorType = alertState.type
+  const errorMessage = alertState.message
 
   //Call custom hooks
   useFetchUserRole(UserRoleService, userRole, user)
@@ -74,6 +83,16 @@ const CreateUser = (props: Props) => {
       formErrors: { name: '', avatar: '', userRole: '', scopes: '' }
     })
   }
+
+  useEffect(() => {
+    if (errorType.value === 'error') {
+      setError(errorMessage.value)
+      setOpenWarning(true)
+      setTimeout(() => {
+        setOpenWarning(false)
+      }, 5000)
+    }
+  }, [errorType.value, errorMessage.value])
 
   const createUserRole = () => {
     setOpenCreateUserRole(true)
@@ -160,27 +179,24 @@ const CreateUser = (props: Props) => {
             {t('admin:components.user.createNewUser')}
           </DialogTitle>
           <InputText
-            name="name"
-            label={t('admin:components.user.name')}
             value={state.name}
-            error={state.formErrors.name}
+            formErrors={state.formErrors.name}
             handleInputChange={handleChange}
+            name="name"
           />
           <InputSelect
-            name="avatar"
-            label={t('admin:components.user.avatar')}
+            formErrors={state.formErrors.avatar}
             value={state.avatar}
-            error={state.formErrors.avatar}
-            menu={staticResourceMenu}
             handleInputChange={handleChange}
+            name="avatar"
+            menu={staticResourceMenu}
           />
           <InputSelect
-            name="userRole"
-            label={t('admin:components.user.userRole')}
-            value={state.userRole}
-            error={state.formErrors.userRole}
-            menu={userRoleData}
             handleInputChange={handleChange}
+            value={state.userRole}
+            name="userRole"
+            menu={userRoleData}
+            formErrors={state.formErrors.userRole}
           />
           <DialogContentText className={styles.mb15}>
             <span className={styles.select}>{t('admin:components.user.dontSeeUserRole')}</span>{' '}
@@ -188,11 +204,7 @@ const CreateUser = (props: Props) => {
               {t('admin:components.user.createOne')}
             </a>
           </DialogContentText>
-          <AutoComplete
-            data={scopeData}
-            label={t('admin:components.user.grantScope')}
-            handleChangeScopeType={handleChangeScopeType}
-          />
+          <AutoComplete data={scopeData} label="Grant Scope" handleChangeScopeType={handleChangeScopeType} />
           <DialogActions>
             <Button className={styles.submitButton} onClick={handleSubmit}>
               {t('admin:components.user.submit')}

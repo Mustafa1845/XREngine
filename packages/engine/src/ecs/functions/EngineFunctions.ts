@@ -37,7 +37,7 @@ export const shutdownEngine = async () => {
 /** Reset the engine and remove everything from memory. */
 export function reset() {
   console.log('RESETTING ENGINE')
-  dispatchAction(EngineActions.sceneUnloaded())
+  dispatchAction(Engine.instance.store, EngineActions.sceneUnloaded())
 
   disposeDracoLoaderWorkers()
 
@@ -82,7 +82,7 @@ export function reset() {
 
   AssetLoader.Cache.clear()
 
-  dispatchAction(EngineActions.initializeEngine({ initialised: false }))
+  dispatchAction(Engine.instance.store, EngineActions.initializeEngine({ initialised: false }))
   Engine.instance.currentWorld.inputState.clear()
   Engine.instance.currentWorld.prevInputState.clear()
 }
@@ -91,12 +91,10 @@ export const unloadScene = (world: World, removePersisted = false) => {
   unloadAllEntities(world, removePersisted)
   unloadSystems(world, true)
 
-  dispatchAction(EngineActions.sceneUnloaded())
+  dispatchAction(Engine.instance.store, EngineActions.sceneUnloaded())
 
   Engine.instance.currentWorld.scene.background = new Color('black')
   Engine.instance.currentWorld.scene.environment = null
-
-  EngineRenderer.instance.resetScene()
 
   isClient && configureEffectComposer()
 

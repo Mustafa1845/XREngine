@@ -40,7 +40,7 @@ process.on('unhandledRejection', (reason, p) => {
   process.exit(1)
 })
 
-if (process.env.APP_ENV === 'development' || process.env.LOCAL === 'true') {
+if (globalThis.process?.env.APP_ENV === 'development') {
   // Avoids DEPTH_ZERO_SELF_SIGNED_CERT error for self-signed certs - needed for local storage provider
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
@@ -139,19 +139,19 @@ const client = {
 }
 
 // TODO: rename to 'instanceserver'
-const instanceserver = {
+const gameserver = {
   clientHost: process.env.APP_HOST!,
-  hostname: process.env.INSTANCESERVER_HOST,
+  hostname: process.env.GAMESERVER_HOST,
   rtc_start_port: parseInt(process.env.RTC_START_PORT!),
   rtc_end_port: parseInt(process.env.RTC_END_PORT!),
   rtc_port_block_size: parseInt(process.env.RTC_PORT_BLOCK_SIZE!),
   identifierDigits: 5,
   local: process.env.LOCAL === 'true',
-  domain: process.env.INSTANCESERVER_DOMAIN || 'instanceserver.theoverlay.io',
+  domain: process.env.GAMESERVER_DOMAIN || 'gameserver.theoverlay.io',
   releaseName: process.env.RELEASE_NAME!,
-  port: process.env.INSTANCESERVER_PORT!,
+  port: process.env.GAMESERVER_PORT!,
   locationName: process.env.PRELOAD_LOCATION_NAME!,
-  shutdownDelayMs: parseInt(process.env.INSTANCESERVER_SHUTDOWN_DELAY_MS!) || 0
+  shutdownDelayMs: parseInt(process.env.GAMESERVER_SHUTDOWN_DELAY_MS!) || 0
 }
 
 /**
@@ -321,11 +321,6 @@ const blockchain = {
   blockchainUrl: process.env.BLOCKCHAIN_URL,
   blockchainUrlSecret: process.env.BLOCKCHAIN_URL_SECRET
 }
-
-const ipfs = {
-  enabled: process.env.USE_IPFS
-}
-
 /**
  * Full config
  */
@@ -339,8 +334,7 @@ const config = {
   coil,
   db,
   email,
-  instanceserver,
-  ipfs,
+  gameserver,
   server,
   redis,
   scopes,

@@ -3,7 +3,7 @@ import { createState, useState } from '@speigg/hookstate'
 import { CreateGroup, Group } from '@xrengine/common/src/interfaces/Group'
 import { GroupResult } from '@xrengine/common/src/interfaces/GroupResult'
 
-import { NotificationService } from '../../common/services/NotificationService'
+import { AlertService } from '../../common/services/AlertService'
 import { client } from '../../feathers'
 import { store, useDispatch } from '../../store'
 
@@ -84,7 +84,7 @@ export const GroupService = {
       })
       dispatch(GroupAction.setAdminGroup(list))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   createGroupByAdmin: async (groupItem: CreateGroup) => {
@@ -94,7 +94,7 @@ export const GroupService = {
       const newGroup = (await client.service('group').create({ ...groupItem })) as Group
       dispatch(GroupAction.addAdminGroup(newGroup))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   patchGroupByAdmin: async (groupId, groupItem) => {
@@ -104,7 +104,7 @@ export const GroupService = {
       const group = (await client.service('group').patch(groupId, groupItem)) as Group
       dispatch(GroupAction.updateGroup(group))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   deleteGroupByAdmin: async (groupId) => {
@@ -114,7 +114,7 @@ export const GroupService = {
       await client.service('group').remove(groupId)
       dispatch(GroupAction.removeGroupAction(groupId))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   }
 }

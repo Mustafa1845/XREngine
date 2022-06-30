@@ -9,7 +9,7 @@ import {
   VideoUpdateForm
 } from '@xrengine/common/src/interfaces/AdminService'
 
-import { NotificationService } from '../../common/services/NotificationService'
+import { AlertService } from '../../common/services/AlertService'
 import { client } from '../../feathers'
 import { PublicVideo, VideoAction } from '../../media/services/VideoService'
 import { store, useDispatch } from '../../store'
@@ -47,10 +47,10 @@ export const AdminService = {
         }
       })
       const result = res.data as VideoCreatedResponse
-      NotificationService.dispatchNotify('Video uploaded', { variant: 'success' })
+      AlertService.dispatchAlertSuccess('Video uploaded')
       dispatch(AdminAction.videoCreated(result))
     } catch (err) {
-      NotificationService.dispatchNotify('Video upload error: ' + err.response.data.message, { variant: 'error' })
+      AlertService.dispatchAlertError(new Error('Video upload error: ' + err.response.data.message))
     }
   },
   updateVideo: async (data: VideoUpdateForm) => {
@@ -60,7 +60,7 @@ export const AdminService = {
       .service('static-resource')
       .patch(data.id, data)
       .then((updatedVideo: VideoUpdatedResponse) => {
-        NotificationService.dispatchNotify('Video updated', { variant: 'success' })
+        AlertService.dispatchAlertSuccess('Video updated')
         dispatch(AdminAction.videoUpdated(updatedVideo))
       })
   },
@@ -71,7 +71,7 @@ export const AdminService = {
       .service('static-resource')
       .remove(id)
       .then((removedVideo: VideoUpdatedResponse) => {
-        NotificationService.dispatchNotify('Video deleted', { variant: 'success' })
+        AlertService.dispatchAlertSuccess('Video deleted')
         dispatch(AdminAction.videoDeleted(removedVideo))
       })
   },

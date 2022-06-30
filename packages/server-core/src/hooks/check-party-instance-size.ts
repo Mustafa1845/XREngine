@@ -63,8 +63,8 @@ export default () => {
               selfIpAddress = `${server.status.address as string}:${server.status.portsList[0].port as string}`
             } else {
               const agonesSDK = context.app.agonesSDK
-              const isResult = await agonesSDK.getGameServer()
-              status = isResult.status
+              const gsResult = await agonesSDK.getGameServer()
+              status = gsResult.status
               selfIpAddress = `${emittedIp.ipAddress}:3031`
             }
             const instance = (await context.app.service('instance').create({

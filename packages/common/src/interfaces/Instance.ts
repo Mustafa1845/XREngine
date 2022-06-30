@@ -11,7 +11,7 @@ export interface Instance {
   ended?: boolean
   assigned?: boolean
   assignedAt?: Date
-  instanceserver_subdomain_provision?: InstanceServerSubdomainProvision
+  gameserver_subdomain_provision?: GameServerSubdomainProvision
 }
 
 export const InstanceSeed: Instance = {
@@ -23,14 +23,14 @@ export const InstanceSeed: Instance = {
   channelId: ''
 }
 
-export interface InstanceServerSubdomainProvision {
+export interface GameServerSubdomainProvision {
   id: number
-  is_id: string
-  is_number: string
+  gs_id: string
+  gs_number: string
   allocated: boolean
 }
 
-export interface InstanceServerPatch {
+export interface GameServerPatch {
   status: boolean
   message: string
 }

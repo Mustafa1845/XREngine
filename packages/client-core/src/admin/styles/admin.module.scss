@@ -792,12 +792,8 @@
 .modalContent {
   display: flex;
   flex-direction: column;
-  width: 30%;
+  width: 50%;
   background-color: var(--popupBackground);
-
-  @media (max-width: 1200px) {
-    width: 50%;
-  }
 
   @media (max-width: 768px) {
     width: 90%;

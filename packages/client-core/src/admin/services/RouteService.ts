@@ -3,7 +3,7 @@ import { createState, useState } from '@speigg/hookstate'
 
 import { InstalledRoutesInterface } from '@xrengine/common/src/interfaces/Route'
 
-import { NotificationService } from '../../common/services/NotificationService'
+import { AlertService } from '../../common/services/AlertService'
 import { client } from '../../feathers'
 import { store, useDispatch } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
@@ -46,7 +46,7 @@ export const RouteService = {
         dispatch(RouteActions.installedRoutesRetrievedAction(routes.data))
       }
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   }
 }

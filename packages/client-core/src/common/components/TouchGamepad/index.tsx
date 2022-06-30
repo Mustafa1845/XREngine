@@ -1,11 +1,7 @@
-import { useState } from '@speigg/hookstate'
-import React, { FunctionComponent, useEffect } from 'react'
+import React, { FunctionComponent } from 'react'
 import { Joystick } from 'react-joystick-component'
 
-import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
-import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { GamepadAxis, GamepadButtons } from '@xrengine/engine/src/input/enums/InputEnums'
-import { InteractableComponent } from '@xrengine/engine/src/interaction/components/InteractableComponent'
 
 import TouchAppIcon from '@mui/icons-material/TouchApp'
 
@@ -18,9 +14,6 @@ export const TouchGamepad: FunctionComponent<TouchGamepadProps> = () => {
     const event = new CustomEvent(eventType, { detail: { button } })
     document.dispatchEvent(event)
   }
-
-  const availableInteractable = useEngineState().availableInteractable.value
-  const interactableComponent = availableInteractable && getComponent(availableInteractable, InteractableComponent)
 
   const buttonsConfig: Array<{ button: GamepadButtons; label: string }> = [
     {
@@ -86,7 +79,7 @@ export const TouchGamepad: FunctionComponent<TouchGamepadProps> = () => {
           stickColor="rgba(255, 255, 255, 0.8)"
         />
       </div>
-      {interactableComponent && <div className={styles.controlButtonContainer}>{buttons}</div>}
+      <div className={styles.controlButtonContainer}>{buttons}</div>
     </>
   )
 }

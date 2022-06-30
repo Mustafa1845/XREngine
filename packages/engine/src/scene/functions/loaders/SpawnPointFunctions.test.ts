@@ -25,8 +25,7 @@ class AssetLoader {
 describe('SpawnPointFunctions', () => {
   let entity: Entity
   let spawnPointFunctions = proxyquire('./SpawnPointFunctions', {
-    '../../../assets/classes/AssetLoader': { AssetLoader },
-    '../../../common/functions/isClient': { isClient: true }
+    '../../../assets/classes/AssetLoader': { AssetLoader }
   })
 
   beforeEach(() => {

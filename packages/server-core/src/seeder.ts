@@ -15,7 +15,7 @@ const settingsServiceNames = [
   'coil-setting',
   'client-setting',
   'email-setting',
-  'instance-server-setting',
+  'game-server-setting',
   'redis-setting',
   'server-setting'
 ]

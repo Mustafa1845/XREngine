@@ -12,7 +12,7 @@ export const addError = (entity: Entity, key: string, error: any) => {
   console.error('[addError]:', entity, key, error)
   const errorComponent = getComponent(entity, ErrorComponent) ?? addComponent(entity, ErrorComponent, {})
   errorComponent[key] = error
-  dispatchAction(EngineActions.updateEntityError({ entity }))
+  dispatchAction(Engine.instance.store, EngineActions.updateEntityError({ entity }))
 }
 
 export const removeError = (entity: Entity, key: string) => {
@@ -23,8 +23,8 @@ export const removeError = (entity: Entity, key: string) => {
 
   if (isEmpty(errorComponent)) {
     removeComponent(entity, ErrorComponent)
-    dispatchAction(EngineActions.updateEntityError({ entity, isResolved: true }))
+    dispatchAction(Engine.instance.store, EngineActions.updateEntityError({ entity, isResolved: true }))
   } else {
-    dispatchAction(EngineActions.updateEntityError({ entity }))
+    dispatchAction(Engine.instance.store, EngineActions.updateEntityError({ entity }))
   }
 }

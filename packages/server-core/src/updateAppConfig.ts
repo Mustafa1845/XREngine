@@ -429,7 +429,7 @@ export const updateAppConfig = async (): Promise<void> => {
     })
   promises.push(emailSettingPromise)
 
-  const instanceServerSetting = sequelizeClient.define('instanceServerSetting', {
+  const gameServerSetting = sequelizeClient.define('gameServerSetting', {
     clientHost: {
       type: DataTypes.STRING,
       allowNull: true
@@ -474,33 +474,33 @@ export const updateAppConfig = async (): Promise<void> => {
       type: DataTypes.STRING
     }
   })
-  const instanceServerSettingPromise = instanceServerSetting
+  const gameServerSettingPromise = gameServerSetting
     .findAll()
-    .then(([dbInstanceServer]) => {
-      const dbInstanceServerConfig = dbInstanceServer && {
-        clientHost: dbInstanceServer.clientHost,
-        rtc_start_port: dbInstanceServer.rtc_start_port,
-        rtc_end_port: dbInstanceServer.rtc_end_port,
-        rtc_port_block_size: dbInstanceServer.rtc_port_block_size,
-        identifierDigits: dbInstanceServer.identifierDigits,
-        local: dbInstanceServer.local,
-        domain: dbInstanceServer.domain,
-        releaseName: dbInstanceServer.releaseName,
-        port: dbInstanceServer.port,
-        mode: dbInstanceServer.mode,
-        locationName: dbInstanceServer.locationName
+    .then(([dbGameServer]) => {
+      const dbGameServerConfig = dbGameServer && {
+        clientHost: dbGameServer.clientHost,
+        rtc_start_port: dbGameServer.rtc_start_port,
+        rtc_end_port: dbGameServer.rtc_end_port,
+        rtc_port_block_size: dbGameServer.rtc_port_block_size,
+        identifierDigits: dbGameServer.identifierDigits,
+        local: dbGameServer.local,
+        domain: dbGameServer.domain,
+        releaseName: dbGameServer.releaseName,
+        port: dbGameServer.port,
+        mode: dbGameServer.mode,
+        locationName: dbGameServer.locationName
       }
-      if (dbInstanceServerConfig) {
-        appConfig.instanceserver = {
-          ...appConfig.instanceserver,
-          ...dbInstanceServerConfig
+      if (dbGameServerConfig) {
+        appConfig.gameserver = {
+          ...appConfig.gameserver,
+          ...dbGameServerConfig
         }
       }
     })
     .catch((e) => {
-      logger.error(e, `[updateAppConfig]: Failed to read instanceServerSetting: ${e.message}`)
+      logger.error(e, `[updateAppConfig]: Failed to read gameServerSetting: ${e.message}`)
     })
-  promises.push(instanceServerSettingPromise)
+  promises.push(gameServerSettingPromise)
 
   const redisSetting = sequelizeClient.define('redisSetting', {
     enabled: {

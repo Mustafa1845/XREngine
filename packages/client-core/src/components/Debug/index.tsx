@@ -11,6 +11,7 @@ import {
   MappedComponent,
   removeComponent
 } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
+import { Network } from '@xrengine/engine/src/networking/classes/Network'
 import {
   accessEngineRendererState,
   EngineRendererAction,
@@ -39,7 +40,7 @@ export const Debug = () => {
   const showingStateRef = useRef(isShowing)
   const engineRendererState = useEngineRendererState()
   const { t } = useTranslation()
-  const network = Engine.instance.currentWorld.networks.get(Engine.instance.currentWorld.worldNetwork?.hostId)
+  const networkTransport = Network.instance.getTransport('world')
 
   function setupListener() {
     window.addEventListener('keydown', downHandler)
@@ -71,11 +72,17 @@ export const Debug = () => {
   }
 
   const togglePhysicsDebug = () => {
-    dispatchAction(EngineRendererAction.setPhysicsDebug(!engineRendererState.physicsDebugEnable.value))
+    dispatchAction(
+      Engine.instance.store,
+      EngineRendererAction.setPhysicsDebug(!engineRendererState.physicsDebugEnable.value)
+    )
   }
 
   const toggleAvatarDebug = () => {
-    dispatchAction(EngineRendererAction.setAvatarDebug(!engineRendererState.avatarDebugEnable.value))
+    dispatchAction(
+      Engine.instance.store,
+      EngineRendererAction.setAvatarDebug(!engineRendererState.avatarDebugEnable.value)
+    )
   }
 
   const renderNamedEntities = () => {
@@ -111,20 +118,27 @@ export const Debug = () => {
   const toggleNodeHelpers = () => {
     Engine.instance.currentWorld.camera.layers.toggle(ObjectLayers.NodeHelper)
     dispatchAction(
+      Engine.instance.store,
       EngineRendererAction.changeNodeHelperVisibility(!accessEngineRendererState().nodeHelperVisibility.value)
     )
   }
 
   const toggleGridHelper = () => {
     Engine.instance.currentWorld.camera.layers.toggle(ObjectLayers.Gizmos)
-    dispatchAction(EngineRendererAction.changeGridToolVisibility(!accessEngineRendererState().gridVisibility.value))
+    dispatchAction(
+      Engine.instance.store,
+      EngineRendererAction.changeGridToolVisibility(!accessEngineRendererState().gridVisibility.value)
+    )
   }
 
   const simpleMaterials = () => {
     if (hasComponent(Engine.instance.currentWorld.worldEntity, SimpleMaterialTagComponent))
       removeComponent(Engine.instance.currentWorld.worldEntity, SimpleMaterialTagComponent)
     else addComponent(Engine.instance.currentWorld.worldEntity, SimpleMaterialTagComponent, {})
-    dispatchAction(EngineRendererAction.changeGridToolVisibility(!accessEngineRendererState().gridVisibility.value))
+    dispatchAction(
+      Engine.instance.store,
+      EngineRendererAction.changeGridToolVisibility(!accessEngineRendererState().gridVisibility.value)
+    )
   }
 
   if (isShowing)
@@ -181,7 +195,7 @@ export const Debug = () => {
               </button>
             </div>
             <div className={styles.refreshBlock}>
-              {network != null && <Tick />}
+              {networkTransport != null && <Tick />}
               <button type="submit" title={t('common:debug.refresh')} onClick={refresh} className={styles.refreshBtn}>
                 <RefreshIcon fontSize="small" />
               </button>
@@ -189,11 +203,15 @@ export const Debug = () => {
           </div>
         </div>
         <StatsPanel show={showingStateRef.current} resetCounter={resetStats} />
-        {network !== null && (
+        {networkTransport !== null && (
           <>
             <div className={styles.jsonPanel}>
               <h1>{t('common:debug.engineStore')}</h1>
               <JSONTree data={Engine.instance.store} />
+            </div>
+            <div className={styles.jsonPanel}>
+              <h1>{t('common:debug.worldStore')}</h1>
+              <JSONTree data={Engine.instance.currentWorld.store} />
             </div>
             <div className={styles.jsonPanel}>
               <h1>{t('common:debug.namedEntities')}</h1>
@@ -201,7 +219,7 @@ export const Debug = () => {
             </div>
             <div className={styles.jsonPanel}>
               <h1>{t('common:debug.networkObject')}</h1>
-              <JSONTree data={{ ...network }} />
+              <JSONTree data={{ ...networkTransport }} />
             </div>
             <div className={styles.jsonPanel}>
               <h1>{t('common:debug.networkClients')}</h1>

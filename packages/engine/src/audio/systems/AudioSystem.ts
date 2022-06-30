@@ -40,7 +40,7 @@ export default async function AudioSystem(world: World) {
     console.log('starting audio')
     audioReady = true
     Engine.instance.currentWorld.audioListener.context.resume()
-    dispatchAction(EngineActions.startSuspendedContexts())
+    dispatchAction(Engine.instance.store, EngineActions.startSuspendedContexts())
 
     callbacks.forEach((cb) => cb())
     callbacks = null!
@@ -88,11 +88,11 @@ export default async function AudioSystem(world: World) {
     removeComponent(ent, PlaySoundEffect)
   }
 
-  matchActionOnce(EngineActions.joinedWorld.matches, () => {
+  matchActionOnce(Engine.instance.store, EngineActions.joinedWorld.matches, () => {
     restoreAudioSettings()
   })
 
-  addActionReceptor(AudioSettingReceptor)
+  addActionReceptor(Engine.instance.store, AudioSettingReceptor)
 
   return () => {
     for (const entity of soundEffectQuery.enter(world)) {

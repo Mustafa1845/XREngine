@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { LocationAction, useLocationState } from '@xrengine/client-core/src/social/services/LocationService'
 import { useDispatch } from '@xrengine/client-core/src/store'
 import { useAuthState } from '@xrengine/client-core/src/user/services/AuthService'
-import { EngineActions } from '@xrengine/engine/src/ecs/classes/EngineState'
-import { dispatchAction, useHookEffect } from '@xrengine/hyperflux'
+import { useHookEffect } from '@xrengine/hyperflux'
 
 import { retrieveLocationByName } from './LocationLoadHelper'
 
@@ -36,10 +35,6 @@ export const LoadLocationScene = () => {
       retrieveLocationByName(locationState.locationName.value)
     }
   }, [authState.isLoggedIn, locationState.locationName])
-
-  useHookEffect(() => {
-    if (authState.user.id.value) dispatchAction(EngineActions.connect({ id: authState.user.id.value }))
-  }, [authState.user])
 
   if (isUserBanned) return <div className="banned">{t('location.youHaveBeenBannedMsg')}</div>
 

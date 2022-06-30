@@ -54,10 +54,6 @@ class AnimationMixer {
   clipAction = (name: string) => {
     return this.actions.find((action) => action.name === name)
   }
-
-  stopAllAction = () => {
-    this.actions.forEach((action) => action.stop())
-  }
 }
 
 class AnimationClip {

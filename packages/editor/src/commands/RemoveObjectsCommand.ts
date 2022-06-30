@@ -1,6 +1,5 @@
 import { store } from '@xrengine/client-core/src/store'
 import { SceneJson } from '@xrengine/common/src/interfaces/SceneInterface'
-import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
 import { removeEntity } from '@xrengine/engine/src/ecs/functions/EntityFunctions'
 import {
@@ -8,126 +7,122 @@ import {
   removeEntityNodeFromParent,
   traverseEntityNode
 } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
+import { useWorld } from '@xrengine/engine/src/ecs/functions/SystemHooks'
 import { serializeWorld } from '@xrengine/engine/src/scene/functions/serializeWorld'
 
 import { executeCommand } from '../classes/History'
-import EditorCommands, { CommandFuncType, CommandParams, ObjectCommands } from '../constants/EditorCommands'
+import EditorCommands from '../constants/EditorCommands'
 import { serializeObject3DArray } from '../functions/debug'
 import { filterParentEntities } from '../functions/filterParentEntities'
 import { EditorAction } from '../services/EditorServices'
 import { SelectionAction } from '../services/SelectionServices'
+import Command, { CommandParams } from './Command'
 
-export type RemoveObjectCommandUndoParams = {
-  parents: EntityTreeNode[]
-  befores: EntityTreeNode[]
-  components: SceneJson[]
+export interface RemoveObjectCommandParams extends CommandParams {
+  /** Whether to deselect object or not */
+  deselectObject?: boolean
+
+  skipSerialization?: boolean
 }
 
-export type RemoveObjectCommandParams = CommandParams & {
-  type: ObjectCommands.REMOVE_OBJECTS
+export default class RemoveObjectsCommand extends Command {
+  undoObjects: EntityTreeNode[]
+
+  oldParents: EntityTreeNode[]
+
+  oldBefores: EntityTreeNode[]
+
+  deselectObject?: boolean
+
+  oldComponents: SceneJson[]
 
   skipSerialization?: boolean
 
-  undo?: RemoveObjectCommandUndoParams
-}
+  removedObjectCount: number
 
-function prepare(command: RemoveObjectCommandParams) {
-  if (command.keepHistory) {
-    command.undo = {
-      parents: [],
-      befores: [],
-      components: []
-    }
+  constructor(objects: EntityTreeNode[], params: RemoveObjectCommandParams) {
+    super(objects, params)
 
-    const tree = Engine.instance.currentWorld.entityTree
-    for (let i = command.affectedNodes.length - 1; i >= 0; i--) {
-      const node = command.affectedNodes[i]
+    this.removedObjectCount = objects.length
+    this.skipSerialization = params.skipSerialization
+    this.deselectObject = params.deselectObject
 
-      if (node.parentEntity) {
-        const parent = tree.entityNodeMap.get(node.parentEntity)
-        if (!parent) throw new Error('Parent is not defined')
-        command.undo.parents.push(parent)
+    if (this.keepHistory) {
+      this.undoObjects = []
+      this.oldParents = []
+      this.oldBefores = []
+      this.oldComponents = []
+      const tree = useWorld().entityTree
 
-        const before = tree.entityNodeMap.get(parent.children![parent.children!.indexOf(node.entity) + 1])
-        command.undo.befores.push(before!)
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i]
+        this.undoObjects.push(obj)
+
+        if (obj.parentEntity) {
+          const parent = tree.entityNodeMap.get(obj.parentEntity)
+          if (!parent) throw new Error('Parent is not defined')
+          this.oldParents.push(parent)
+
+          const before = tree.entityNodeMap.get(parent.children![parent.children!.indexOf(obj.entity) + 1])
+          this.oldBefores.push(before!)
+        }
+
+        if (!this.skipSerialization) this.oldComponents.push(serializeWorld(obj))
       }
-
-      if (!command.skipSerialization) command.undo.components.push(serializeWorld(node))
     }
   }
-}
 
-function execute(command: RemoveObjectCommandParams) {
-  removeObject(command)
-  emitEventAfter(command)
-}
+  execute() {
+    this.emitBeforeExecuteEvent()
 
-function undo(command: RemoveObjectCommandParams) {
-  if (!command.undo) return
-
-  const nodes = [] as EntityTreeNode[]
-  for (let i = command.affectedNodes.length - 1; i >= 0; i--) {
-    nodes.push(command.affectedNodes[i])
-  }
-
-  executeCommand({
-    type: EditorCommands.ADD_OBJECTS,
-    affectedNodes: nodes,
-    parents: command.undo.parents,
-    befores: command.undo.befores,
-    useUniqueName: false,
-    sceneData: command.undo.components,
-    updateSelection: false
-  })
-
-  executeCommand({
-    type: EditorCommands.REPLACE_SELECTION,
-    affectedNodes: command.affectedNodes
-  })
-}
-
-function emitEventAfter(command: RemoveObjectCommandParams) {
-  if (command.preventEvents) return
-
-  store.dispatch(EditorAction.sceneModified(true))
-  store.dispatch(SelectionAction.changedSceneGraph())
-}
-
-function removeObject(command: RemoveObjectCommandParams) {
-  const removedParentNodes = getEntityNodeArrayFromEntities(
-    filterParentEntities(
-      command.affectedNodes.map((o) => o.entity),
-      undefined,
-      true,
-      false
+    const removedObjectsRoots = getEntityNodeArrayFromEntities(
+      filterParentEntities(
+        this.affectedObjects.map((o) => o.entity),
+        undefined,
+        true,
+        false
+      )
     )
-  )
 
-  for (let i = 0; i < removedParentNodes.length; i++) {
-    const node = removedParentNodes[i]
-    if (!node.parentEntity) continue
+    for (let i = 0; i < removedObjectsRoots.length; i++) {
+      const object = removedObjectsRoots[i]
+      if (!object.parentEntity) continue
 
-    traverseEntityNode(node, (node) => removeEntity(node.entity))
-    removeEntityNodeFromParent(node)
+      traverseEntityNode(object, (node) => removeEntity(node.entity))
+      removeEntityNodeFromParent(object)
+    }
+
+    if (this.deselectObject) {
+      executeCommand(EditorCommands.REMOVE_FROM_SELECTION, this.affectedObjects, {
+        shouldEmitEvent: this.shouldEmitEvent
+      })
+    }
+
+    this.emitAfterExecuteEvent()
   }
 
-  if (command.updateSelection) {
-    executeCommand({
-      type: EditorCommands.REMOVE_FROM_SELECTION,
-      affectedNodes: command.affectedNodes,
-      preventEvents: command.preventEvents
+  undo() {
+    if (!this.undoObjects) return
+
+    executeCommand(EditorCommands.ADD_OBJECTS, this.undoObjects, {
+      parents: this.oldParents,
+      befores: this.oldBefores,
+      isObjectSelected: this.isSelected,
+      useUniqueName: false,
+      sceneData: this.oldComponents
     })
+
+    executeCommand(EditorCommands.REPLACE_SELECTION, this.affectedObjects)
   }
-}
 
-function toString(command: RemoveObjectCommandParams) {
-  return `RemoveMultipleObjectsCommand id: ${command.id} objects: ${serializeObject3DArray(command.affectedNodes)}`
-}
+  toString() {
+    return `RemoveMultipleObjectsCommand id: ${this.id} objects: ${serializeObject3DArray(this.affectedObjects)}`
+  }
 
-export const RemoveObjectCommand: CommandFuncType = {
-  prepare,
-  execute,
-  undo,
-  emitEventAfter,
-  toString
+  emitAfterExecuteEvent() {
+    if (this.shouldEmitEvent) {
+      store.dispatch(EditorAction.sceneModified(true))
+      store.dispatch(SelectionAction.changedSceneGraph())
+    }
+  }
 }

@@ -15,7 +15,7 @@ import Client from './Client'
 import ClientTheme from './ClientTheme'
 import Coil from './Coil'
 import Email from './Email'
-import InstanceServer from './InstanceServer'
+import GameServer from './GameServer'
 import Project from './Project'
 import Redis from './Redis'
 import Server from './Server'
@@ -244,7 +244,7 @@ const Setting = () => {
     setAnalyticsFocused(false)
   }
 
-  const handleInstanceServer = () => {
+  const handleGameServer = () => {
     setIsGame(!isGame)
     setGameFocused(!gameFocused)
     setIsProject(false)
@@ -395,7 +395,7 @@ const Setting = () => {
     if (isRedis) setContents(<Redis />)
     if (isServer) setContents(<Server />)
     if (isEmail) setContents(<Email />)
-    if (isGame) setContents(<InstanceServer />)
+    if (isGame) setContents(<GameServer />)
     if (isClient) setContents(<Client />)
     if (isAnalytics) setContents(<Analytics />)
     if (isProject) setContents(<Project />)
@@ -437,7 +437,7 @@ const Setting = () => {
               handleRedis={handleRedis}
               handleEmail={handleEmail}
               handleClient={handleClient}
-              handleInstanceServer={handleInstanceServer}
+              handleGameServer={handleGameServer}
               handleServer={handleServer}
               handleAnalytics={handleAnalytics}
               handleProject={handleProject}
@@ -471,7 +471,7 @@ const Setting = () => {
             handleRedis={handleRedis}
             handleEmail={handleEmail}
             handleClient={handleClient}
-            handleInstanceServer={handleInstanceServer}
+            handleGameServer={handleGameServer}
             handleServer={handleServer}
             handleAnalytics={handleAnalytics}
             handleProject={handleProject}

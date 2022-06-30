@@ -9,8 +9,7 @@ import defaultSceneSeed from '@xrengine/projects/default-project/default.scene.j
 
 import { Application } from '../../../declarations'
 import logger from '../../logger'
-import { getCacheDomain } from '../../media/storageprovider/getCacheDomain'
-import { getCachedURL } from '../../media/storageprovider/getCachedURL'
+import { getCachedAsset } from '../../media/storageprovider/getCachedAsset'
 import { getStorageProvider } from '../../media/storageprovider/storageprovider'
 import { cleanString } from '../../util/cleanString'
 import { cleanSceneDataCacheURLs, parseSceneDataCacheURLs } from './scene-parser'
@@ -19,22 +18,23 @@ const NEW_SCENE_NAME = 'New-Scene'
 
 const sceneAssetFiles = ['.scene.json', '.thumbnail.jpeg', '.cubemap.png']
 
-export const getSceneData = async (projectName, sceneName, metadataOnly, internal = false) => {
+export const getSceneData = async (projectName, sceneName, metadataOnly, internal, downloadIfNotPresent = false) => {
   const storageProvider = getStorageProvider()
   const scenePath = `projects/${projectName}/${sceneName}.scene.json`
   const thumbnailPath = `projects/${projectName}/${sceneName}.thumbnail.jpeg`
 
-  const cacheDomain = getCacheDomain(storageProvider, internal)
-  const thumbnailUrl = getCachedURL(thumbnailPath, cacheDomain)
+  const thumbnailUrl = getCachedAsset(thumbnailPath, storageProvider.cacheDomain, internal)
 
   const sceneExists = await storageProvider.doesExist(`${sceneName}.scene.json`, `projects/${projectName}/`)
   if (sceneExists) {
-    const sceneResult = await storageProvider.getCachedObject(scenePath)
+    const sceneResult = await storageProvider.getObject(scenePath)
     const sceneData: SceneData = {
       name: sceneName,
       project: projectName,
       thumbnailUrl: thumbnailUrl + `?${Date.now()}`,
-      scene: metadataOnly ? undefined! : parseSceneDataCacheURLs(JSON.parse(sceneResult.Body.toString()), cacheDomain)
+      scene: metadataOnly
+        ? undefined!
+        : parseSceneDataCacheURLs(JSON.parse(sceneResult.Body.toString()), storageProvider.cacheDomain, internal)
     }
     return sceneData
   }

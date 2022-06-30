@@ -3,7 +3,7 @@
  */
 import { createState, useState } from '@speigg/hookstate'
 
-import { NotificationService } from '../../common/services/NotificationService'
+import { AlertService } from '../../common/services/AlertService'
 import { useDispatch } from '../../store'
 import { store } from '../../store'
 
@@ -35,7 +35,7 @@ export const WebxrNativeService = {
     try {
       dispatch(WebxrNativeAction.setWebXrNative())
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   changeWebXrNative: () => {
@@ -45,7 +45,7 @@ export const WebxrNativeService = {
     try {
       dispatch(WebxrNativeAction.tougleWebXrNative())
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   }
 }

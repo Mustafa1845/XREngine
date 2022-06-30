@@ -27,7 +27,7 @@ export default (app: Application) => {
         type: DataTypes.STRING,
         allowNull: true
       },
-      instanceserver: {
+      gameserver: {
         type: DataTypes.UUID,
         allowNull: true
       }

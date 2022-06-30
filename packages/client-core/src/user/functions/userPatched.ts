@@ -1,15 +1,12 @@
-import { t } from 'i18next'
-
 import { resolveUser } from '@xrengine/common/src/interfaces/User'
 import { addComponent, getComponent, hasComponent } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { getEid } from '@xrengine/engine/src/networking/utils/getUser'
 import { UserNameComponent } from '@xrengine/engine/src/scene/components/UserNameComponent'
 
-import { NotificationService } from '../../common/services/NotificationService'
 import { _updateUsername } from '../../social/services/utils/chatSystem'
 import { useDispatch } from '../../store'
 import { accessAuthState, AuthAction } from '../services/AuthService'
-import { accessUserState, UserAction } from '../services/UserService'
+import { UserAction } from '../services/UserService'
 
 // import { loadAvatarForUpdatedUser } from './userAvatarFunctions'
 
@@ -18,35 +15,33 @@ export const userPatched = (params) => {
   const dispatch = useDispatch()
 
   const selfUser = accessAuthState().user
-  const userState = accessUserState()
-  const patchedUser = resolveUser(params.userRelationship)
+  const user = resolveUser(params.userRelationship)
 
-  console.log('User patched', patchedUser)
+  console.log('User patched', user)
   // loadAvatarForUpdatedUser(user)
-  _updateUsername(patchedUser.id, patchedUser.name)
+  _updateUsername(user.id, user.name)
 
-  const eid = getEid(patchedUser.id)
-  console.log('adding username component to user: ' + patchedUser.name + ' eid: ' + eid)
+  const eid = getEid(user.id)
+  console.log('adding username component to user: ' + user.name + ' eid: ' + eid)
   if (eid !== undefined) {
     if (!hasComponent(eid, UserNameComponent)) {
-      addComponent(eid, UserNameComponent, { username: patchedUser.name })
+      addComponent(eid, UserNameComponent, { username: user.name })
     } else {
-      getComponent(eid, UserNameComponent).username = patchedUser.name
+      getComponent(eid, UserNameComponent).username = user.name
     }
   }
 
-  if (selfUser.id.value === patchedUser.id) {
-    if (selfUser.instanceId.value !== patchedUser.instanceId) dispatch(UserAction.clearLayerUsers())
-    if (selfUser.channelInstanceId.value !== patchedUser.channelInstanceId)
-      dispatch(UserAction.clearChannelLayerUsers())
-    dispatch(AuthAction.userUpdated(patchedUser))
-    // if (user.partyId) {
-    //   setRelationship('party', user.partyId);
-    // }
-    if (patchedUser.instanceId !== selfUser.instanceId.value) {
+  if (selfUser.id.value === user.id) {
+    if (selfUser.instanceId.value !== user.instanceId) dispatch(UserAction.clearLayerUsers())
+    if (selfUser.channelInstanceId.value !== user.channelInstanceId) dispatch(UserAction.clearChannelLayerUsers())
+    dispatch(AuthAction.userUpdated(user))
+    if (user.partyId) {
+      // setRelationship('party', user.partyId);
+    }
+    if (user.instanceId !== selfUser.instanceId.value) {
       const parsed = new URL(window.location.href)
       let query = parsed.searchParams
-      query.set('instanceId', patchedUser?.instanceId || '')
+      query.set('instanceId', user?.instanceId || '')
       parsed.search = query.toString()
 
       if (typeof history.pushState !== 'undefined') {
@@ -54,19 +49,16 @@ export const userPatched = (params) => {
       }
     }
   } else {
-    const isLayerUser = userState.layerUsers.value.find((item) => item.id === patchedUser.id)
-
-    if (patchedUser.channelInstanceId != null && patchedUser.channelInstanceId === selfUser.channelInstanceId.value)
-      dispatch(UserAction.addedChannelLayerUser(patchedUser))
-    if (!isLayerUser && patchedUser.instanceId === selfUser.instanceId.value) {
-      dispatch(UserAction.addedLayerUser(patchedUser))
-      NotificationService.dispatchNotify(`${patchedUser.name} ${t('common:toast.joined')}`, { variant: 'default' })
+    if (user.channelInstanceId != null && user.channelInstanceId === selfUser.channelInstanceId.value)
+      dispatch(UserAction.addedChannelLayerUser(user))
+    if (user.instanceId != null && user.instanceId === selfUser.instanceId.value) {
+      dispatch(UserAction.addedLayerUser(user))
+      dispatch(UserAction.displayUserToast(user, { userAdded: true }))
     }
-    if (isLayerUser && patchedUser.instanceId !== selfUser.instanceId.value) {
-      dispatch(UserAction.removedLayerUser(patchedUser))
-      NotificationService.dispatchNotify(`${patchedUser.name} ${t('common:toast.left')}`, { variant: 'default' })
+    if (user.instanceId !== selfUser.instanceId.value) {
+      dispatch(UserAction.removedLayerUser(user))
+      dispatch(UserAction.displayUserToast(user, { userRemoved: true }))
     }
-    if (patchedUser.channelInstanceId !== selfUser.channelInstanceId.value)
-      dispatch(UserAction.removedChannelLayerUser(patchedUser))
+    if (user.channelInstanceId !== selfUser.channelInstanceId.value) dispatch(UserAction.removedChannelLayerUser(user))
   }
 }

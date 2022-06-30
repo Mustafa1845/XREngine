@@ -20,19 +20,14 @@ import { createBody, getAllShapesFromObject3D, ShapeOptions } from '../../src/ph
 import { BodyType, ColliderTypes } from '../../src/physics/types/PhysicsTypes'
 import { Object3DComponent } from '../../src/scene/components/Object3DComponent'
 import { TransformComponent } from '../../src/transform/components/TransformComponent'
-import { createMockNetwork } from '../util/createMockNetwork'
 
 describe('Equippables Integration Tests', () => {
-  beforeEach(() => {
-    createEngine()
-    createMockNetwork()
-  })
-
   it('Can equip and unequip', async () => {
+    createEngine()
     const world = Engine.instance.currentWorld
 
     const hostUserId = 'world' as UserId
-    world.worldNetwork.hostId = hostUserId
+    world.hostId = hostUserId
     const hostIndex = 0
     world.clients.set(hostUserId, { userId: hostUserId, name: 'world', index: hostIndex })
 
@@ -74,7 +69,7 @@ describe('Equippables Integration Tests', () => {
     // network mock stuff
     // initially the object is owned by server
     const networkObject = addComponent(equippableEntity, NetworkObjectComponent, {
-      ownerId: world.worldNetwork.hostId,
+      ownerId: world.hostId,
       networkId: 0 as NetworkId,
       prefab: '',
       parameters: {}
@@ -91,10 +86,10 @@ describe('Equippables Integration Tests', () => {
     equipEntity(equipperEntity, equippableEntity, undefined)
 
     // world.receptors.push(
-    //     (a) => matches(a).when(WorldNetworkAction.setEquippedObject.matches, setEquippedObjectReceptor)
+    //     (a) => matches(a).when(NetworkWorldAction.setEquippedObject.matches, setEquippedObjectReceptor)
     // )
-    ActionFunctions.clearOutgoingActions()
-    ActionFunctions.applyIncomingActions()
+    ActionFunctions.clearOutgoingActions(world.store)
+    ActionFunctions.applyIncomingActions(world.store)
 
     equippableQueryEnter(equipperEntity)
 
@@ -110,8 +105,8 @@ describe('Equippables Integration Tests', () => {
     // unequip stuff
     unequipEntity(equipperEntity)
 
-    ActionFunctions.clearOutgoingActions()
-    ActionFunctions.applyIncomingActions()
+    ActionFunctions.clearOutgoingActions(world.store)
+    ActionFunctions.applyIncomingActions(world.store)
 
     equippableQueryExit(equipperEntity)
 

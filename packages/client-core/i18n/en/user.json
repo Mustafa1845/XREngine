@@ -135,10 +135,7 @@
       "rotation": "Rotation",
       "rotation-smooth-speed": "Rotation Smooth Speed",
       "rotation-angle": "Rotation Angle",
-      "moving": "Moving",
-      "user-avatar": "Avatar Setting",
-      "invert-rotation": "Invert Rotation And Move Sticks",
-      "show-avatar": "Show Avatar"
+      "moving": "Moving"
     },
     "profile": {
       "lbl-profile": "Profile",
@@ -301,7 +298,6 @@
   },
   "person": {
     "you": "You",
-    "yourScreen": "Your Screen",
     "muteForEveryone": "Mute for everyone",
     "unmuteForEveryone": "Unmute for everyone",
     "muteMe": "Mute me",

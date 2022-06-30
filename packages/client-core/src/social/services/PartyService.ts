@@ -11,8 +11,8 @@ import { PartyUser } from '@xrengine/common/src/interfaces/PartyUser'
 import { User } from '@xrengine/common/src/interfaces/User'
 import multiLogger from '@xrengine/common/src/logger'
 
+import { AlertService } from '../../common/services/AlertService'
 import { accessLocationInstanceConnectionState } from '../../common/services/LocationInstanceConnectionService'
-import { NotificationService } from '../../common/services/NotificationService'
 import { client } from '../../feathers'
 import { store, useDispatch } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
@@ -109,7 +109,7 @@ export const PartyService = {
       const partyResult = (await client.service('party').get('')) as Party
       dispatch(PartyAction.loadedParty(partyResult))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   // Temporary Method for arbitrary testing
@@ -158,7 +158,7 @@ export const PartyService = {
     try {
       await client.service('party').create({})
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   removeParty: async (partyId: string) => {
@@ -177,7 +177,7 @@ export const PartyService = {
       const party = (await client.service('party').remove(partyId)) as Party
       dispatch(PartyAction.removedParty(party))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   inviteToParty: async (partyId: string, userId: string) => {
@@ -186,16 +186,16 @@ export const PartyService = {
         partyId,
         userId
       })
-      NotificationService.dispatchNotify(i18n.t('social:partyInvitationSent'), { variant: 'success' })
+      AlertService.dispatchAlertSuccess(i18n.t('social:partyInvitationSent'))
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   removePartyUser: async (partyUserId: string) => {
     try {
       await client.service('party-user').remove(partyUserId)
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   },
   transferPartyOwner: async (partyUserId: string) => {
@@ -204,7 +204,7 @@ export const PartyService = {
         isOwner: true
       })
     } catch (err) {
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err)
     }
   }
 }

@@ -16,7 +16,8 @@ const state = createState({
   layerUsers: [] as Array<User>,
   layerUsersUpdateNeeded: true,
   channelLayerUsers: [] as Array<User>,
-  channelLayerUsersUpdateNeeded: true
+  channelLayerUsersUpdateNeeded: true,
+  toastMessages: [] as Array<{ user: User; userAdded?: boolean; userRemoved?: boolean }>
 })
 
 store.receptors.push((action: UserActionType): void => {
@@ -79,6 +80,8 @@ store.receptors.push((action: UserActionType): void => {
           })
           return s.channelLayerUsers[idx].set(none)
         } else return s
+      case 'USER_TOAST':
+        return s.toastMessages.merge([action.message])
     }
   }, action.type)
 })
@@ -144,6 +147,10 @@ export const UserService = {
 
   cancelBlock: (userId: string, relatedUserId: string) => {
     return removeRelation(userId, relatedUserId)
+  },
+
+  showUserToast: (user: User, args: string) => {
+    return UserAction.displayUserToast(user, args)
   }
 }
 
@@ -274,6 +281,13 @@ export const UserAction = {
     return {
       type: 'REMOVED_CHANNEL_LAYER_USER' as const,
       user: user
+    }
+  },
+
+  displayUserToast: (user: User, args: any) => {
+    return {
+      type: 'USER_TOAST' as const,
+      message: { user, args }
     }
   }
 }

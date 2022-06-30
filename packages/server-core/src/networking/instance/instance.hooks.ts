@@ -12,7 +12,7 @@ export default {
       addAssociations({
         models: [
           {
-            model: 'instanceserver-subdomain-provision'
+            model: 'gameserver-subdomain-provision'
           }
         ]
       })
@@ -21,7 +21,7 @@ export default {
       addAssociations({
         models: [
           {
-            model: 'instanceserver-subdomain-provision'
+            model: 'gameserver-subdomain-provision'
           }
         ]
       })

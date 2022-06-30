@@ -281,9 +281,9 @@ editor:
   securityContext: {}
 
 
-instanceserver:
+gameserver:
   enabled: true
-  name: instanceserver
+  name: gameserver
 
   replicaCount: 1
   image:

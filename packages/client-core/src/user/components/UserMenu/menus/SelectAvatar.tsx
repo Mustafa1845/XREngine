@@ -65,7 +65,6 @@ const selectAvatarMenu = (props: Props) => {
         selectedAvatar?.avatar?.url || '',
         selectedAvatar['user-thumbnail']?.url || ''
       )
-      props.changeActiveMenu(null)
     }
     setSelectedAvatar('')
   }

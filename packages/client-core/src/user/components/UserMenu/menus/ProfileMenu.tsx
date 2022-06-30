@@ -14,6 +14,7 @@ import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Grid from '@mui/material/Grid'
 import InputAdornment from '@mui/material/InputAdornment'
+import Snackbar from '@mui/material/Snackbar'
 import { styled } from '@mui/material/styles'
 import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
@@ -26,7 +27,6 @@ import { FacebookIcon } from '../../../../common/components/Icons/FacebookIcon'
 import { GoogleIcon } from '../../../../common/components/Icons/GoogleIcon'
 import { LinkedInIcon } from '../../../../common/components/Icons/LinkedInIcon'
 import { TwitterIcon } from '../../../../common/components/Icons/TwitterIcon'
-import { NotificationService } from '../../../../common/services/NotificationService'
 import { AuthService, useAuthState } from '../../../services/AuthService'
 import styles from '../index.module.scss'
 import { getAvatarURLForUser, Views } from '../util'
@@ -112,14 +112,13 @@ const ProfileMenu = (props: Props): JSX.Element => {
   const [errorUsername, setErrorUsername] = useState(false)
   const [showUserId, setShowUserId] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
+  const [userIdState, setUserIdState] = useState({ value: '', copied: false, open: false })
+  const [apiKeyState, setApiKeyState] = useState({ value: '', copied: false, open: false })
   const authSettingState = useAdminAuthSettingState()
   const [authSetting] = authSettingState?.authSettings?.value || []
   const [authState, setAuthState] = useState(initialState)
   const loading = useAuthState().isProcessing.value
-  const userSettings = selfUser.user_setting.value
-  const userId = selfUser.id.value
-  const apiKey = selfUser.apiKey?.token?.value
-  const userRole = selfUser.userRole.value
+  const userSettings = selfUser?.user_setting.value
 
   useEffect(() => {
     !authSetting && AuthSettingService.fetchAuthSetting()
@@ -139,7 +138,8 @@ const ProfileMenu = (props: Props): JSX.Element => {
 
   const handleChangeUserThemeMode = (event) => {
     const settings = { ...userSettings, themeMode: event.target.checked ? 'dark' : 'light' }
-    userSettings && AuthService.updateUserSettings(userSettings.id as string, settings)
+    selfUser?.user_setting?.value?.id &&
+      AuthService.updateUserSettings(selfUser?.user_setting?.value?.id as string, settings)
   }
 
   let type = ''
@@ -161,6 +161,10 @@ const ProfileMenu = (props: Props): JSX.Element => {
     loadCredentialHandler()
   }, []) // Only run once
 
+  useEffect(() => {
+    selfUser && setUsername(selfUser.name.value)
+  }, [selfUser.name.value])
+
   const updateUserName = (e) => {
     e.preventDefault()
     handleUpdateUsername()
@@ -176,7 +180,7 @@ const ProfileMenu = (props: Props): JSX.Element => {
     if (!name) return
     if (selfUser.name.value.trim() !== name) {
       // @ts-ignore
-      AuthService.updateUsername(userId, name)
+      AuthService.updateUsername(selfUser.id.value, name)
     }
   }
   const handleInputChange = (e) => setEmailPhone(e.target.value)
@@ -211,6 +215,8 @@ const ProfileMenu = (props: Props): JSX.Element => {
     else if (setProfileMenuOpen != null) setProfileMenuOpen(false)
     setShowUserId(false)
     setShowApiKey(false)
+    setUserIdState({ ...userIdState, open: false })
+    setApiKeyState({ ...apiKeyState, open: false })
     await AuthService.logoutUser()
     // window.location.reload()
   }
@@ -241,6 +247,24 @@ const ProfileMenu = (props: Props): JSX.Element => {
 
     AuthService.loginUserByXRWallet(result)
   }*/
+
+  const handleShowId = () => {
+    setShowUserId(!showUserId)
+    setUserIdState({ ...userIdState, value: selfUser.id.value as string })
+  }
+
+  const handleShowApiKey = () => {
+    setShowApiKey(!showApiKey)
+    setApiKeyState({ ...apiKeyState, value: selfUser.apiKey?.token?.value })
+  }
+
+  const handleCloseUserId = () => {
+    setUserIdState({ ...userIdState, open: false })
+  }
+
+  const handleCloseApiKey = () => {
+    setApiKeyState({ ...apiKeyState, open: false })
+  }
 
   const refreshApiKey = () => {
     AuthService.updateApiKey()
@@ -284,8 +308,11 @@ const ProfileMenu = (props: Props): JSX.Element => {
 
   const goToEthNFT = () => {
     let token = JSON.stringify(localStorage.getItem('TheOverlay-Auth-Store'))
-    if (userId && token)
-      window.open(`${globalThis.process.env['VITE_ETH_MARKETPLACE']}?data=${userId}&token=${token}`, '_blank')
+    if (selfUser.id.value && token)
+      window.open(
+        `${globalThis.process.env['VITE_ETH_MARKETPLACE']}?data=${selfUser.id.value}&token=${token}`,
+        '_blank'
+      )
   }
   const enableSocial =
     authState?.discord ||
@@ -302,7 +329,7 @@ const ProfileMenu = (props: Props): JSX.Element => {
       <section className={styles.profilePanel}>
         <section className={styles.profileBlock}>
           <div className={styles.avatarBlock}>
-            <img src={getAvatarURLForUser(userId)} />
+            <img src={getAvatarURLForUser(selfUser?.id?.value)} />
             {changeActiveMenu != null && (
               <Button
                 className={styles.avatarBtn}
@@ -344,15 +371,23 @@ const ProfileMenu = (props: Props): JSX.Element => {
             </span>
 
             <Grid container justifyContent="right" className={styles.justify}>
-              <Grid item xs={userRole === 'guest' ? 6 : 4}>
+              <Grid item xs={selfUser.userRole?.value === 'guest' ? 6 : 4}>
                 <h2>
-                  {userRole === 'admin' ? t('user:usermenu.profile.youAreAn') : t('user:usermenu.profile.youAreA')}{' '}
-                  <span id="user-role">{userRole}</span>.
+                  {selfUser?.userRole?.value === 'admin'
+                    ? t('user:usermenu.profile.youAreAn')
+                    : t('user:usermenu.profile.youAreA')}{' '}
+                  <span id="user-role">{selfUser?.userRole?.value}</span>.
                 </h2>
               </Grid>
-              <Grid item container xs={userRole === 'guest' ? 6 : 4} alignItems="flex-start" direction="column">
+              <Grid
+                item
+                container
+                xs={selfUser.userRole?.value === 'guest' ? 6 : 4}
+                alignItems="flex-start"
+                direction="column"
+              >
                 <Tooltip title="Show User ID" placement="right">
-                  <h2 className={styles.showUserId} id="show-user-id" onClick={() => setShowUserId(!showUserId)}>
+                  <h2 className={styles.showUserId} id="show-user-id" onClick={handleShowId}>
                     {showUserId ? t('user:usermenu.profile.hideUserId') : t('user:usermenu.profile.showUserId')}{' '}
                   </h2>
                 </Tooltip>
@@ -360,14 +395,14 @@ const ProfileMenu = (props: Props): JSX.Element => {
               {selfUser?.apiKey?.id && (
                 <Grid item container xs={4} alignItems="flex-start" direction="column">
                   <Tooltip title="Show API key" placement="right">
-                    <h2 className={styles.showUserId} onClick={() => setShowApiKey(!showApiKey)}>
+                    <h2 className={styles.showUserId} onClick={handleShowApiKey}>
                       {showApiKey ? t('user:usermenu.profile.hideApiKey') : t('user:usermenu.profile.showApiKey')}{' '}
                     </h2>
                   </Tooltip>
                 </Grid>
               )}
             </Grid>
-            {userRole !== 'guest' && (
+            {selfUser?.userRole.value !== 'guest' && (
               <Grid
                 display="grid"
                 gridTemplateColumns="1fr 1.5fr"
@@ -400,7 +435,9 @@ const ProfileMenu = (props: Props): JSX.Element => {
             {selfUser && (
               <div className={styles.themeSettingContainer}>
                 <FormControlLabel
-                  control={<MaterialUISwitch sx={{ m: 1 }} checked={userSettings?.themeMode === 'dark'} />}
+                  control={
+                    <MaterialUISwitch sx={{ m: 1 }} checked={selfUser?.user_setting?.value?.themeMode === 'dark'} />
+                  }
                   label={<div className={styles.themeHeading}>Theme Mode:</div>}
                   labelPlacement="start"
                   onChange={(e) => handleChangeUserThemeMode(e)}
@@ -408,7 +445,7 @@ const ProfileMenu = (props: Props): JSX.Element => {
               </div>
             )}
             <h4>
-              {userRole !== 'guest' && (
+              {selfUser.userRole.value !== 'guest' && (
                 <div className={styles.logout} onClick={handleLogout}>
                   {t('user:usermenu.profile.logout')}
                 </div>
@@ -435,16 +472,15 @@ const ProfileMenu = (props: Props): JSX.Element => {
                 size="small"
                 placeholder={'user id'}
                 variant="outlined"
-                value={userId}
+                value={selfUser?.id.value}
+                onChange={({ target: { value } }) => setUserIdState({ ...userIdState, value, copied: false })}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <CopyToClipboard
-                        text={userId}
+                        text={userIdState.value}
                         onCopy={() => {
-                          NotificationService.dispatchNotify('User ID copied', {
-                            variant: 'success'
-                          })
+                          setUserIdState({ ...userIdState, copied: true, open: true })
                         }}
                       >
                         <a href="#" className={styles.materialIconBlock}>
@@ -471,7 +507,8 @@ const ProfileMenu = (props: Props): JSX.Element => {
                 size="small"
                 placeholder={'API key'}
                 variant="outlined"
-                value={apiKey}
+                value={selfUser?.apiKey?.token?.value}
+                onChange={({ target: { value } }) => setApiKeyState({ ...apiKeyState, value, copied: false })}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -481,11 +518,9 @@ const ProfileMenu = (props: Props): JSX.Element => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <CopyToClipboard
-                        text={apiKey}
+                        text={apiKeyState.value}
                         onCopy={() => {
-                          NotificationService.dispatchNotify('API Key copied', {
-                            variant: 'success'
-                          })
+                          setApiKeyState({ ...apiKeyState, copied: true, open: true })
                         }}
                       >
                         <a href="#" className={styles.materialIconBlock}>
@@ -502,7 +537,7 @@ const ProfileMenu = (props: Props): JSX.Element => {
 
         {!hideLogin && (
           <>
-            {userRole === 'guest' && enableConnect && (
+            {selfUser?.userRole.value === 'guest' && enableConnect && (
               <section className={styles.emailPhoneSection}>
                 <Typography variant="h1" className={styles.panelHeader}>
                   {getConnectText()}
@@ -536,7 +571,7 @@ const ProfileMenu = (props: Props): JSX.Element => {
                 </form>
               </section>
             )}
-            {userRole === 'guest' && changeActiveMenu != null && (
+            {selfUser?.userRole.value === 'guest' && changeActiveMenu != null && (
               <section className={styles.walletSection}>
                 <Typography variant="h3" className={styles.textBlock}>
                   {t('user:usermenu.profile.or')}
@@ -551,7 +586,7 @@ const ProfileMenu = (props: Props): JSX.Element => {
               </section>
             )}
 
-            {userRole === 'guest' && enableSocial && (
+            {selfUser?.userRole.value === 'guest' && enableSocial && (
               <section className={styles.socialBlock}>
                 <Typography variant="h3" className={styles.textBlock}>
                   {t('user:usermenu.profile.connectSocial')}
@@ -601,6 +636,24 @@ const ProfileMenu = (props: Props): JSX.Element => {
           </>
         )}
       </section>
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        open={userIdState.open}
+        onClose={handleCloseUserId}
+        message="User ID copied"
+        key={'top' + 'center'}
+        autoHideDuration={2000}
+      />
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        open={apiKeyState.open}
+        onClose={handleCloseApiKey}
+        message="API Key copied"
+        key={'bottom' + 'center'}
+        autoHideDuration={2000}
+      />
     </div>
   )
 }

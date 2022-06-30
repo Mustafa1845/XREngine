@@ -4,7 +4,7 @@ import { ComponentJson } from '@xrengine/common/src/interfaces/SceneInterface'
 
 import { AnimationManager } from '../../../avatar/AnimationManager'
 import { BoneStructure } from '../../../avatar/AvatarBoneMatching'
-import { AnimationComponent, AnimationComponentType } from '../../../avatar/components/AnimationComponent'
+import { AnimationComponent } from '../../../avatar/components/AnimationComponent'
 import { AvatarAnimationComponent } from '../../../avatar/components/AvatarAnimationComponent'
 import { LoopAnimationComponent, LoopAnimationComponentType } from '../../../avatar/components/LoopAnimationComponent'
 import { setupAvatarModel } from '../../../avatar/functions/avatarFunctions'
@@ -96,7 +96,19 @@ export const updateLoopAnimation: ComponentUpdateFunction = (entity: Entity): vo
     ? AnimationManager.instance._animations
     : object3d.animations
 
-  if (!Engine.instance.isEditor) playAnimationClip(animationComponent, component)
+  if (!Engine.instance.isEditor) {
+    if (component.action) component.action.stop()
+    if (component.activeClipIndex >= 0) {
+      component.action = animationComponent.mixer
+        .clipAction(
+          AnimationClip.findByName(
+            animationComponent.animations,
+            animationComponent.animations[component.activeClipIndex].name
+          )
+        )
+        .play()
+    }
+  }
 
   const scene = getComponent(entity, Object3DComponent).value as any
 
@@ -149,26 +161,5 @@ export const parseLoopAnimationProperties = (props): LoopAnimationComponentType 
   return {
     activeClipIndex: props.activeClipIndex ?? SCENE_COMPONENT_LOOP_ANIMATION_DEFAULT_VALUE.activeClipIndex,
     hasAvatarAnimations: props.hasAvatarAnimations ?? SCENE_COMPONENT_LOOP_ANIMATION_DEFAULT_VALUE.hasAvatarAnimations
-  }
-}
-
-export const playAnimationClip = (
-  animationComponent: AnimationComponentType,
-  loopAnimationComponent: LoopAnimationComponentType
-) => {
-  if (loopAnimationComponent.action) loopAnimationComponent.action.stop()
-  if (
-    loopAnimationComponent.activeClipIndex >= 0 &&
-    animationComponent.animations[loopAnimationComponent.activeClipIndex]
-  ) {
-    animationComponent.mixer.stopAllAction()
-    loopAnimationComponent.action = animationComponent.mixer
-      .clipAction(
-        AnimationClip.findByName(
-          animationComponent.animations,
-          animationComponent.animations[loopAnimationComponent.activeClipIndex].name
-        )
-      )
-      .play()
   }
 }

@@ -19,8 +19,7 @@ export default (app: Application): void => {
       ...(config.db as any),
       logging: forceRefresh ? logger.info.bind(logger) : false,
       define: {
-        freezeTableName: true,
-        collate: 'utf8mb4_general_ci'
+        freezeTableName: true
       }
     })
     const oldSetup = app.setup

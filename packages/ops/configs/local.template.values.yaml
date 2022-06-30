@@ -80,7 +80,7 @@ api:
     FACEBOOK_CLIENT_ID: "<FACEBOOK_CLIENT_ID>"
     FACEBOOK_CLIENT_SECRET: "<FACEBOOK_CLIENT_SECRET>"
     FORCE_DB_REFRESH: "false"
-    INSTANCESERVER_DOMAIN: instanceserver-local.theoverlay.io
+    GAMESERVER_DOMAIN: gameserver-local.theoverlay.io
     GITHUB_CALLBACK_URL: https://local.theoverlay.io/auth/oauth/github
     GITHUB_CLIENT_ID: "<GITHUB_CLIENT_ID>"
     GITHUB_CLIENT_SECRET: "<GITHUB_CLIENT_SECRET>"
@@ -183,7 +183,7 @@ media:
     FACEBOOK_CLIENT_ID: "<FACEBOOK_CLIENT_ID>"
     FACEBOOK_CLIENT_SECRET: "<FACEBOOK_CLIENT_SECRET>"
     FORCE_DB_REFRESH: "false"
-    INSTANCESERVER_DOMAIN: instanceserver-local.theoverlay.io
+    GAMESERVER_DOMAIN: gameserver-local.theoverlay.io
     GITHUB_CALLBACK_URL: https://local.theoverlay.io/auth/oauth/github
     GITHUB_CLIENT_ID: "<GITHUB_CLIENT_ID>"
     GITHUB_CLIENT_SECRET: "<GITHUB_CLIENT_SECRET>"
@@ -232,7 +232,7 @@ media:
 release:
   name: "local"
 
-instanceserver:
+gameserver:
   image:
     repository: xrengine
     pullPolicy: IfNotPresent
@@ -242,7 +242,7 @@ instanceserver:
     APP_URL: https://local.theoverlay.io
     CERT: certs/cert.pem
     KEY: certs/key.pem
-    INSTANCESERVER_PORT: "3031"
+    GAMESERVER_PORT: "3031"
     ROUTE53_ACCESS_KEY_ID: <ROUTE53_USER_ACCESS_KEY>
     ROUTE53_ACCESS_KEY_SECRET: <ROUTE53_USER_SECRET_KEY>
     ROUTE53_HOSTED_ZONE_ID: <ROUTE53_HOSTED_ZONE_ID>
@@ -250,8 +250,8 @@ instanceserver:
     RTC_END_PORT: "40099"
     RTC_PORT_BLOCK_SIZE: "100"
     LOCAL: "true"
-    INSTANCESERVER_DOMAIN: instanceserver-local.theoverlay.io
-    INSTANCESERVER_MODE: "realtime"
+    GAMESERVER_DOMAIN: gameserver-local.theoverlay.io
+    GAMESERVER_MODE: "realtime"
     STORAGE_PROVIDER: local
     LOCAL_STORAGE_PROVIDER: "localhost:8642"
     LOCAL_STORAGE_PROVIDER_PORT: "8642"
@@ -262,7 +262,7 @@ instanceserver:
     STORAGE_S3_REGION: <S3_REGION>
     STORAGE_S3_STATIC_RESOURCE_BUCKET: xrengine-static-resources
   ingress:
-    host: instanceserver-local.theoverlay.io
+    host: gameserver-local.theoverlay.io
     annotations:
       kubernetes.io/ingress.class: nginx
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"

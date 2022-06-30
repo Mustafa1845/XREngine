@@ -25,7 +25,7 @@ import Typography from '@mui/material/Typography'
 import { useAuthState } from '../../../user/services/AuthService'
 import AlertMessage from '../../common/AlertMessage'
 import AutoComplete from '../../common/AutoComplete'
-import InputSelect, { InputSelectProps } from '../../common/InputSelect'
+import InputSelect from '../../common/InputSelect'
 import { validateForm } from '../../common/validation/formValidation'
 import { ScopeTypeService, useScopeTypeState } from '../../services/ScopeTypeService'
 import { SingleUserService, useSingleUserState } from '../../services/SingleUserService'
@@ -42,6 +42,11 @@ interface Props {
 
 interface ScopeData {
   type: string
+}
+
+interface InputSelectProps {
+  value: string
+  label: string
 }
 
 const ViewUser = (props: Props) => {
@@ -284,12 +289,11 @@ const ViewUser = (props: Props) => {
               <label>{t('admin:components.user.userRole')}</label>
               {user.id.value !== userAdmin.id && (
                 <InputSelect
-                  name="userRole"
-                  label={t('admin:components.user.userRole')}
-                  value={state.userRole}
-                  error={state.formErrors.userRole}
-                  menu={userRoleData}
                   handleInputChange={handleInputChange}
+                  value={state.userRole}
+                  name="userRole"
+                  menu={userRoleData}
+                  formErrors={state.formErrors.userRole}
                 />
               )}
               <AutoComplete

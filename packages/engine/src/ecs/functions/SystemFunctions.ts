@@ -32,9 +32,7 @@ export const initSystems = async (world: World, systemModulesToLoad: SystemModul
   const loadSystemInjection = async (s: SystemFactoryType<any>) => {
     const name = s.systemModule.default.name
     try {
-      console.log(`${name} initializing on ${s.type} pipeline`)
       const system = await s.systemModule.default(world, s.args)
-      console.log(`${name} ready`)
       return {
         name,
         type: s.type,
@@ -73,6 +71,7 @@ export const initSystems = async (world: World, systemModulesToLoad: SystemModul
   systems.forEach((s) => {
     if (s) {
       world.pipelines[s.type].push(s)
+      console.log(`${s.type} ${s.name}`)
     }
   })
 }

@@ -73,8 +73,7 @@ export const moveAvatar = (world: World, entity: Entity, camera: PerspectiveCame
   // threejs camera is weird, when in VR we must use the head diretion
   if (hasComponent(entity, XRInputSourceComponent))
     getComponent(entity, XRInputSourceComponent).head.getWorldDirection(tempVec1)
-  else if (camera) camera.getWorldDirection(tempVec1)
-  else tempVec1.copy(forward)
+  else camera.getWorldDirection(tempVec1)
 
   // vec3 holds state of (controller input * timeStep)
   // set y to 0 and normalize horizontal plane

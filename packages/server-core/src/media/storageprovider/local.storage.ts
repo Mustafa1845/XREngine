@@ -45,10 +45,6 @@ export class LocalStorage implements StorageProviderInterface {
     }
   }
 
-  getCachedObject = async (key: string): Promise<StorageObjectInterface> => {
-    return this.getObject(key)
-  }
-
   listObjects = async (
     prefix: string,
     recursive = false,

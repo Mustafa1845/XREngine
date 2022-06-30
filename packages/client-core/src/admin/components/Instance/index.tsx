@@ -5,23 +5,23 @@ import Grid from '@mui/material/Grid'
 
 import AlertMessage from '../../common/AlertMessage'
 import Search from '../../common/Search'
-import { useInstanceserverState } from '../../services/InstanceserverService'
+import { useGameserverState } from '../../services/GameserverService'
 import styles from '../../styles/admin.module.scss'
 import InstanceTable from './InstanceTable'
-import PatchInstanceserver from './PatchInstanceserver'
+import PatchGameserver from './PatchGameserver'
 
 const Instance = () => {
   const [search, setSearch] = React.useState('')
-  const [patchInstanceserverOpen, setPatchInstanceserverOpen] = React.useState(false)
+  const [patchGameserverOpen, setPatchGameserverOpen] = React.useState(false)
   const [openAlert, setOpenAlert] = React.useState(false)
-  const instanceserverState = useInstanceserverState()
-  const { patch } = instanceserverState.value
+  const gameserverState = useGameserverState()
+  const { patch } = gameserverState.value
 
   useEffect(() => {
     if (patch) {
       setOpenAlert(true)
     }
-  }, [instanceserverState.patch])
+  }, [gameserverState.patch])
 
   const openPatchModal = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
     if (
@@ -30,11 +30,11 @@ const Instance = () => {
     ) {
       return
     }
-    setPatchInstanceserverOpen(open)
+    setPatchGameserverOpen(open)
   }
 
   const closePatchModal = (open: boolean) => {
-    setPatchInstanceserverOpen(open)
+    setPatchGameserverOpen(open)
   }
 
   const handleCloseAlert = (event?: React.SyntheticEvent | Event, reason?: string) => {
@@ -56,16 +56,14 @@ const Instance = () => {
         </Grid>
         <Grid item xs={12} sm={4}>
           <Button className={styles.openModalBtn} type="submit" variant="contained" onClick={openPatchModal(true)}>
-            Patch Instanceserver
+            Patch Gameserver
           </Button>
         </Grid>
       </Grid>
       <div className={styles.rootTableWithSearch}>
         <InstanceTable search={search} />
       </div>
-      {patchInstanceserverOpen && (
-        <PatchInstanceserver open handleClose={openPatchModal} closeViewModal={closePatchModal} />
-      )}
+      {patchGameserverOpen && <PatchGameserver open handleClose={openPatchModal} closeViewModal={closePatchModal} />}
       {patch && openAlert && (
         <AlertMessage
           open

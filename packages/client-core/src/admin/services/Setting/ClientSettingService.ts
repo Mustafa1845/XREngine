@@ -3,7 +3,7 @@ import { createState, useState } from '@speigg/hookstate'
 
 import { ClientSetting, PatchClientSetting } from '@xrengine/common/src/interfaces/ClientSetting'
 
-import { NotificationService } from '../../../common/services/NotificationService'
+import { AlertService } from '../../../common/services/AlertService'
 import { client } from '../../../feathers'
 import { store, useDispatch } from '../../../store'
 import waitForClientAuthenticated from '../../../util/wait-for-client-authenticated'
@@ -37,9 +37,9 @@ export const ClientSettingService = {
       await waitForClientAuthenticated()
       const clientSettings = (await client.service('client-setting').find()) as Paginated<ClientSetting>
       dispatch(ClientSettingAction.fetchedClient(clientSettings))
-    } catch (err) {
-      console.log(err.message)
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+    } catch (error) {
+      console.error(error.message)
+      AlertService.dispatchAlertError(error.message)
     }
   },
   patchClientSetting: async (data: PatchClientSetting, id: string) => {
@@ -50,7 +50,7 @@ export const ClientSettingService = {
       dispatch(ClientSettingAction.clientSettingPatched())
     } catch (err) {
       console.log(err)
-      NotificationService.dispatchNotify(err.message, { variant: 'error' })
+      AlertService.dispatchAlertError(err.message)
     }
   }
 }
