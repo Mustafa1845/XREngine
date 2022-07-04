@@ -72,6 +72,8 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_URL: ${{ secrets.ECR_URL }}
           PRIVATE_ECR: ${{ secrets.PRIVATE_ECR }}
+      - name: delete package-lock.json
+        run: rm package-lock.json
       - name: Deploy to EKS
         run: bash scripts/deploy_builder.sh prod $GITHUB_SHA
       - name: Publish to Docker Hub
