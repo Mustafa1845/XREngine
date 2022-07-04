@@ -12,7 +12,9 @@ interface Props {
   handleChange: (e) => void
 }
 
-const Search = ({ text, handleChange }: Props) => {
+const Search = (props: Props) => {
+  const { text, handleChange } = props
+
   return (
     <Paper component="div" className={styles.searchRoot}>
       <InputBase

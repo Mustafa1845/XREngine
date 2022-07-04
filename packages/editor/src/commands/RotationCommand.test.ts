@@ -15,10 +15,8 @@ import { Object3DComponent } from '@xrengine/engine/src/scene/components/Object3
 import { TransformSpace } from '@xrengine/engine/src/scene/constants/transformConstants'
 import { registerPrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
 import { TransformComponent } from '@xrengine/engine/src/transform/components/TransformComponent'
-import { applyIncomingActions } from '@xrengine/hyperflux'
 
 import EditorCommands from '../constants/EditorCommands'
-import { deregisterEditorReceptors, registerEditorReceptors } from '../services/EditorServicesReceptor'
 import { accessSelectionState } from '../services/SelectionServices'
 import { getRandomTransform } from './ReparentCommand.test'
 import { RotationCommand, RotationCommandParams } from './RotationCommand'
@@ -34,8 +32,6 @@ describe('RotationCommand', () => {
 
   beforeEach(() => {
     createEngine()
-    registerEditorReceptors()
-    Engine.instance.store.defaultDispatchDelay = 0
     registerPrefabs(Engine.instance.currentWorld)
 
     rootNode = createEntityNode(createEntity())
@@ -103,14 +99,12 @@ describe('RotationCommand', () => {
       const sceneGraphChangeCounter = selectionState.sceneGraphChangeCounter.value
 
       RotationCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert.equal(sceneGraphChangeCounter, selectionState.sceneGraphChangeCounter.value)
     })
 
     it('will emit event if "preventEvents" is false', () => {
       command.preventEvents = false
       RotationCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert(true)
     })
   })
@@ -163,7 +157,6 @@ describe('RotationCommand', () => {
       }
 
       RotationCommand.update?.(command, newCommand)
-      applyIncomingActions()
 
       assert.deepEqual(command.rotations, newCommand.rotations)
     })
@@ -175,7 +168,6 @@ describe('RotationCommand', () => {
       command.rotations = [getRandomEuler()]
 
       RotationCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const rotation = new Quaternion().setFromEuler(command.rotations[i] ?? command.rotations[0])
         assert(getComponent(node.entity, TransformComponent).rotation.equals(rotation))
@@ -187,7 +179,6 @@ describe('RotationCommand', () => {
       command.rotations = [getRandomEuler()]
 
       RotationCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const rotation = new Quaternion().setFromEuler(command.rotations[i] ?? command.rotations[0])
         assert(getComponent(node.entity, TransformComponent).rotation.equals(rotation))
@@ -199,7 +190,6 @@ describe('RotationCommand', () => {
       command.rotations = [getRandomEuler()]
 
       RotationCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const rotation = new Quaternion().setFromEuler(command.rotations[i] ?? command.rotations[0])
         assert(getComponent(node.entity, TransformComponent).rotation.equals(rotation))
@@ -214,9 +204,7 @@ describe('RotationCommand', () => {
 
       RotationCommand.prepare(command)
       RotationCommand.execute(command)
-      applyIncomingActions()
       RotationCommand.undo(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const rotation = new Quaternion().setFromEuler(command.rotations[i] ?? command.rotations[0])
         assert(getComponent(node.entity, TransformComponent).rotation.equals(rotation))
@@ -230,9 +218,7 @@ describe('RotationCommand', () => {
 
       RotationCommand.prepare(command)
       RotationCommand.execute(command)
-      applyIncomingActions()
       RotationCommand.undo(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const rotation = new Quaternion().setFromEuler(command.undo?.rotations[i] ?? new Euler())
         assert(getComponent(node.entity, TransformComponent).rotation.equals(rotation))
@@ -247,6 +233,5 @@ describe('RotationCommand', () => {
   afterEach(() => {
     emptyEntityTree(Engine.instance.currentWorld.entityTree)
     accessSelectionState().merge({ selectedEntities: [] })
-    deregisterEditorReceptors()
   })
 })

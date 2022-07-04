@@ -1,9 +1,8 @@
-import { useState } from '@speigg/hookstate'
+import { createState, useState } from '@speigg/hookstate'
 
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
+import { store } from '@xrengine/client-core/src/store'
 import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
 import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
-import { defineAction, defineState, getState } from '@xrengine/hyperflux'
 
 import { filterParentEntities } from '../functions/filterParentEntities'
 
@@ -21,74 +20,74 @@ type SelectionServiceStateType = {
   transformPropertyChanged: boolean
 }
 
-const SelectionState = defineState({
-  name: 'SelectionState',
-  initial: () =>
-    ({
-      selectedEntities: [],
-      selectedParentEntities: [],
-      beforeSelectionChangeCounter: 1,
-      selectionCounter: 1,
-      objectChangeCounter: 1,
-      sceneGraphChangeCounter: 1,
-      affectedObjects: [],
-      propertyName: '',
-      transformPropertyChanged: false
-    } as SelectionServiceStateType)
+const state = createState<SelectionServiceStateType>({
+  selectedEntities: [],
+  selectedParentEntities: [],
+  beforeSelectionChangeCounter: 1,
+  selectionCounter: 1,
+  objectChangeCounter: 1,
+  sceneGraphChangeCounter: 1,
+  affectedObjects: [],
+  propertyName: '',
+  transformPropertyChanged: false
 })
 
-export const EditorSelectionServiceReceptor = (action) => {
-  getState(SelectionState).batch((s) => {
-    matches(action)
-      .when(SelectionAction.changedBeforeSelection.matches, (action) => {
+store.receptors.push((action: SelectionActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'BEFORE_SELECTION_CHANGED':
         return s.merge({ beforeSelectionChangeCounter: s.beforeSelectionChangeCounter.value + 1 })
-      })
-      .when(SelectionAction.updateSelection.matches, (action) => {
+      case 'SELECTION_CHANGED':
         return s.merge({
           selectionCounter: s.selectionCounter.value + 1,
           selectedEntities: action.selectedEntities,
           selectedParentEntities: filterParentEntities(action.selectedEntities)
         })
-      })
-      .when(SelectionAction.changedObject.matches, (action) => {
+      case 'OBJECT_CHANGED':
         return s.merge({
           objectChangeCounter: s.objectChangeCounter.value + 1,
           affectedObjects: action.objects,
           propertyName: action.propertyName,
           transformPropertyChanged: transformProps.includes(action.propertyName)
         })
-      })
-      .when(SelectionAction.changedSceneGraph.matches, (action) => {
+      case 'SCENE_GRAPH_CHANGED':
         return s.merge({ sceneGraphChangeCounter: s.sceneGraphChangeCounter.value + 1 })
-      })
-  })
-}
+    }
+  }, action.type)
+})
 
-export const accessSelectionState = () => getState(SelectionState)
+export const accessSelectionState = () => state
 
-export const useSelectionState = () => useState(accessSelectionState())
+export const useSelectionState = () => useState(state) as any as typeof state
 
 //Service
 export const SelectionService = {}
 
 //Action
-export class SelectionAction {
-  static changedBeforeSelection = defineAction({
-    type: 'editorSelection.BEFORE_SELECTION_CHANGED'
-  })
-
-  static changedObject = defineAction({
-    type: 'editorSelection.OBJECT_CHANGED',
-    objects: matches.array as Validator<unknown, EntityTreeNode[]>,
-    propertyName: matches.string
-  })
-
-  static changedSceneGraph = defineAction({
-    type: 'editorSelection.SCENE_GRAPH_CHANGED'
-  })
-
-  static updateSelection = defineAction({
-    type: 'editorSelection.SELECTION_CHANGED',
-    selectedEntities: matches.array as Validator<unknown, Entity[]>
-  })
+export const SelectionAction = {
+  changedBeforeSelection: () => {
+    return {
+      type: 'BEFORE_SELECTION_CHANGED' as const
+    }
+  },
+  changedObject: (objects, propertyName) => {
+    return {
+      type: 'OBJECT_CHANGED' as const,
+      objects,
+      propertyName
+    }
+  },
+  changedSceneGraph: () => {
+    return {
+      type: 'SCENE_GRAPH_CHANGED' as const
+    }
+  },
+  updateSelection: (selectedEntities: Entity[]) => {
+    return {
+      type: 'SELECTION_CHANGED' as const,
+      selectedEntities
+    }
+  }
 }
+
+export type SelectionActionType = ReturnType<typeof SelectionAction[keyof typeof SelectionAction]>

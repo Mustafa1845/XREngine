@@ -12,10 +12,8 @@ import {
 import { createEngine } from '@xrengine/engine/src/initializeEngine'
 import { SelectTagComponent } from '@xrengine/engine/src/scene/components/SelectTagComponent'
 import { registerPrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
-import { applyIncomingActions } from '@xrengine/hyperflux'
 
 import EditorCommands from '../constants/EditorCommands'
-import { deregisterEditorReceptors, registerEditorReceptors } from '../services/EditorServicesReceptor'
 import { accessSelectionState } from '../services/SelectionServices'
 import { ReplaceSelectionCommand, ReplaceSelectionCommandParams } from './ReplaceSelectionCommand'
 
@@ -26,8 +24,6 @@ describe('ReplaceSelectionCommand', () => {
 
   beforeEach(() => {
     createEngine()
-    registerEditorReceptors()
-    Engine.instance.store.defaultDispatchDelay = 0
     registerPrefabs(Engine.instance.currentWorld)
 
     rootNode = createEntityNode(createEntity())
@@ -75,7 +71,6 @@ describe('ReplaceSelectionCommand', () => {
       const beforeSelectionChangeCounter = selectionState.beforeSelectionChangeCounter.value
 
       ReplaceSelectionCommand.emitEventBefore?.(command)
-      applyIncomingActions()
       assert.equal(beforeSelectionChangeCounter, selectionState.beforeSelectionChangeCounter.value)
     })
 
@@ -85,7 +80,6 @@ describe('ReplaceSelectionCommand', () => {
       const beforeSelectionChangeCounter = selectionState.beforeSelectionChangeCounter.value
 
       ReplaceSelectionCommand.emitEventBefore?.(command)
-      applyIncomingActions()
       assert.equal(beforeSelectionChangeCounter + 1, selectionState.beforeSelectionChangeCounter.value)
     })
   })
@@ -97,14 +91,12 @@ describe('ReplaceSelectionCommand', () => {
       const sceneGraphChangeCounter = selectionState.sceneGraphChangeCounter.value
 
       ReplaceSelectionCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert.equal(sceneGraphChangeCounter, selectionState.sceneGraphChangeCounter.value)
     })
 
     it('will emit event if "preventEvents" is false', () => {
       command.preventEvents = false
       ReplaceSelectionCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert(true)
     })
   })
@@ -113,7 +105,6 @@ describe('ReplaceSelectionCommand', () => {
     it('Replaces objects to selection', () => {
       command.affectedNodes = nodes
       ReplaceSelectionCommand.execute(command)
-      applyIncomingActions()
       const selection = accessSelectionState().selectedEntities.value
 
       assert.equal(selection.length, command.affectedNodes.length)
@@ -130,11 +121,9 @@ describe('ReplaceSelectionCommand', () => {
       command.keepHistory = false
       ReplaceSelectionCommand.prepare(command)
       ReplaceSelectionCommand.execute(command)
-      applyIncomingActions()
       const selection = accessSelectionState().selectedEntities.value
 
       ReplaceSelectionCommand.undo(command)
-      applyIncomingActions()
 
       assert.equal(selection.length, command.affectedNodes.length)
 
@@ -148,10 +137,8 @@ describe('ReplaceSelectionCommand', () => {
       command.keepHistory = true
       ReplaceSelectionCommand.prepare(command)
       ReplaceSelectionCommand.execute(command)
-      applyIncomingActions()
 
       ReplaceSelectionCommand.undo(command)
-      applyIncomingActions()
 
       const selection = accessSelectionState().selectedEntities.value
       assert.equal(selection.length, command.undo?.selection.length)
@@ -169,6 +156,5 @@ describe('ReplaceSelectionCommand', () => {
   afterEach(() => {
     emptyEntityTree(Engine.instance.currentWorld.entityTree)
     accessSelectionState().merge({ selectedEntities: [] })
-    deregisterEditorReceptors()
   })
 })

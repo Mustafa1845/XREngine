@@ -11,7 +11,7 @@ import Tabs from '@mui/material/Tabs'
 import { InviteService, useInviteState } from '../../../social/services/InviteService'
 import { useAuthState } from '../../../user/services/AuthService'
 import Search from '../../common/Search'
-import { AdminUserService, useUserState } from '../../services/UserService'
+import { UserService, useUserState } from '../../services/UserService'
 import styles from '../../styles/admin.module.scss'
 import ReceivedInvite from './ReceivedInvite'
 import SentInvite from './SentInvite'
@@ -22,13 +22,16 @@ interface TabPanelProps {
   value: number
 }
 
-const TabPanel = ({ children, value, index }: TabPanelProps) => {
+const TabPanel = (props: TabPanelProps) => {
+  const { children, value, index, ...other } = props
+
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
+      {...other}
     >
       {value === index && (
         <Box p={3} className={styles.tabpanelRoot}>
@@ -73,7 +76,7 @@ const InvitesConsole = () => {
 
   useEffect(() => {
     if (user?.id.value != null && (adminUserState.updateNeeded.value === true || refetch)) {
-      AdminUserService.fetchUsersAsAdmin()
+      UserService.fetchUsersAsAdmin()
     }
     setRefetch(false)
   }, [useAuthState(), adminUserState.updateNeeded.value, refetch])

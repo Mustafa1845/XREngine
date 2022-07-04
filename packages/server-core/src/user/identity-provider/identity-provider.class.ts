@@ -39,10 +39,9 @@ export class IdentityProvider<T = IdentityProviderInterface> extends Service<T> 
   async create(data: any, params: Params = {}): Promise<T & { accessToken?: string }> {
     let { token, type, password } = data
     let user
-    let authResult
 
     if (params.authentication) {
-      authResult = await (this.app.service('authentication') as any).strategies.jwt.authenticate(
+      const authResult = await (this.app.service('authentication') as any).strategies.jwt.authenticate(
         { accessToken: params.authentication.accessToken },
         {}
       )
@@ -58,7 +57,7 @@ export class IdentityProvider<T = IdentityProviderInterface> extends Service<T> 
       type !== 'sms'
     )
       type = 'guest' //Non-password/magiclink create requests must always be for guests
-    let userId = data.userId || (authResult ? authResult[config.authentication.entity]?.userId : null)
+    let userId = data.userId
     let identityProvider: any
 
     switch (type) {
@@ -219,9 +218,9 @@ export class IdentityProvider<T = IdentityProviderInterface> extends Service<T> 
         })
       }
 
-      result.accessToken = await this.app
-        .service('authentication')
-        .createAccessToken({}, { subject: result.id.toString() })
+      const authService = new AuthenticationService(this.app, 'authentication')
+      // this.app.service('authentication')
+      result.accessToken = await authService.createAccessToken({}, { subject: result.id.toString() })
     } else if (isDev && type === 'admin') {
       // in dev mode, add all scopes to the first user made an admin
 
@@ -229,9 +228,9 @@ export class IdentityProvider<T = IdentityProviderInterface> extends Service<T> 
         await this.app.service('scope').create({ userId: userId, type })
       }
 
-      result.accessToken = await this.app
-        .service('authentication')
-        .createAccessToken({}, { subject: result.id.toString() })
+      const authService = new AuthenticationService(this.app, 'authentication')
+      // this.app.service('authentication')
+      result.accessToken = await authService.createAccessToken({}, { subject: result.id.toString() })
     }
     return result
   }

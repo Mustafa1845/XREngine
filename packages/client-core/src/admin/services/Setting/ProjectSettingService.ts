@@ -1,8 +1,9 @@
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
+import { createState, useState } from '@speigg/hookstate'
 
-import { API } from '../../../API'
+import { client } from '../../../feathers'
+import { store, useDispatch } from '../../../store'
 
+//State
 export const PROJECT_PAGE_LIMIT = 100
 
 export interface ProjectSettingValue {
@@ -10,52 +11,62 @@ export interface ProjectSettingValue {
   value: string
 }
 
-const AdminProjectSettingsState = defineState({
-  name: 'AdminProjectSettingsState',
-  initial: () => ({
-    projectSetting: [] as Array<ProjectSettingValue>
-  })
+export const state = createState({
+  projectSetting: [] as Array<ProjectSettingValue>
 })
 
-const projectSettingFetchedReceptor = (
-  action: typeof AdminProjectSettingsActions.projectSettingFetched.matches._TYPE
-) => {
-  const state = getState(AdminProjectSettingsState)
-  return state.merge({
-    projectSetting: action.projectSettings
-  })
-}
+store.receptors.push((action: ProjectSettingActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'PROJECT_SETTING_FETCHED':
+        return s.merge({
+          projectSetting: action.projectSetting
+        })
+    }
+  }, action.type)
+})
 
-export const ProjectSettingReceptors = {
-  projectSettingFetchedReceptor
-}
+export const accessProjectSettingState = () => state
 
-export const accessProjectSettingState = () => getState(AdminProjectSettingsState)
+export const useProjectSettingState = () => useState(state) as any as typeof state
 
-export const useProjectSettingState = () => useState(accessProjectSettingState())
-
+//Service
 export const ProjectSettingService = {
   fetchProjectSetting: async (projectId: string) => {
-    const projectSettings = await API.instance.client.service('project-setting').find({
+    const projectSetting = await client.service('project-setting').find({
       query: {
         $limit: 1,
         id: projectId,
         $select: ['settings']
       }
     })
-    dispatchAction(AdminProjectSettingsActions.projectSettingFetched({ projectSettings }))
+    store.dispatch(ProjectSettingAction.projectSettingFetched(projectSetting))
   },
 
   // restricted to admin scope
   updateProjectSetting: async (projectId: string, data: ProjectSettingValue[]) => {
-    await API.instance.client.service('project-setting').patch(projectId, { settings: JSON.stringify(data) })
+    const dispatch = useDispatch()
+
+    await client.service('project-setting').patch(projectId, { settings: JSON.stringify(data) })
+
+    dispatch(ProjectSettingAction.projectSettingUpdated())
     ProjectSettingService.fetchProjectSetting(projectId)
   }
 }
 
-export class AdminProjectSettingsActions {
-  static projectSettingFetched = defineAction({
-    type: 'PROJECT_SETTING_FETCHED' as const,
-    projectSettings: matches.array as Validator<unknown, ProjectSettingValue[]>
-  })
+//Action
+export const ProjectSettingAction = {
+  projectSettingFetched: (projectSetting: ProjectSettingValue[]) => {
+    return {
+      type: 'PROJECT_SETTING_FETCHED' as const,
+      projectSetting: projectSetting
+    }
+  },
+  projectSettingUpdated: () => {
+    return {
+      type: 'PROJECT_SETTING_UPDATED' as const
+    }
+  }
 }
+
+export type ProjectSettingActionType = ReturnType<typeof ProjectSettingAction[keyof typeof ProjectSettingAction]>

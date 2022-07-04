@@ -1,22 +1,30 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { dispatchAction } from '@xrengine/hyperflux'
-
 import Button from '@mui/material/Button'
+import Drawer from '@mui/material/Drawer'
 import Grid from '@mui/material/Grid'
 
-import { AdminAvatarActions } from '../../../admin/services/AvatarService'
+import { AvatarAction } from '../../../admin/services/AvatarService'
+import { useDispatch } from '../../../store'
 import AvatarSelectMenu from '../../../user/components/UserMenu/menus/AvatarSelectMenu'
-import DrawerView from '../../common/DrawerView'
 import Search from '../../common/Search'
 import styles from '../../styles/admin.module.scss'
 import AvatarTable from './AvatarTable'
 
 const Avatar = () => {
   const [search, setSearch] = useState('')
-  const [openDrawer, setOpenDrawer] = useState(false)
+  const [open, setOpen] = useState(false)
   const { t } = useTranslation()
+  const dispatch = useDispatch()
+
+  const handleClickOpen = () => {
+    setOpen(true)
+  }
+
+  const handleClose = () => {
+    setOpen(false)
+  }
 
   const handleChange = (e: any) => {
     setSearch(e.target.value)
@@ -29,22 +37,22 @@ const Avatar = () => {
           <Search text="avatar" handleChange={handleChange} />
         </Grid>
         <Grid item xs={12} sm={4}>
-          <Button className={styles.openModalBtn} type="submit" variant="contained" onClick={() => setOpenDrawer(true)}>
+          <Button className={styles.openModalBtn} type="submit" variant="contained" onClick={handleClickOpen}>
             {t('user:avatar.createAvatar')}
           </Button>
         </Grid>
       </Grid>
-
-      <AvatarTable className={styles.rootTable} search={search} />
-
-      {openDrawer && (
-        <DrawerView open onClose={() => setOpenDrawer(false)}>
+      <div className={styles.rootTable}>
+        <AvatarTable search={search} />
+      </div>
+      {open && (
+        <Drawer anchor="right" open={open} onClose={handleClose} classes={{ paper: styles.paperDrawer }}>
           <AvatarSelectMenu
             adminStyles={styles}
-            onAvatarUpload={() => dispatchAction(AdminAvatarActions.avatarUpdated())}
-            changeActiveMenu={() => setOpenDrawer(false)}
+            onAvatarUpload={() => dispatch(AvatarAction.avatarUpdated())}
+            changeActiveMenu={handleClose}
           />
-        </DrawerView>
+        </Drawer>
       )}
     </React.Fragment>
   )

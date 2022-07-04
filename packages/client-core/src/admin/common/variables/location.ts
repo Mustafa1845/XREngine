@@ -70,3 +70,7 @@ export interface LocationData {
   instanceId: string
   action: any
 }
+
+export interface LocationProps {
+  search: string
+}

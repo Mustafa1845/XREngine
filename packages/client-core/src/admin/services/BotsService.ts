@@ -1,83 +1,71 @@
 import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
 import { AdminBot, CreateBotAsAdmin } from '@xrengine/common/src/interfaces/AdminBot'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
 
-import { API } from '../../API'
+import { client } from '../../feathers'
+import { useDispatch } from '../../store'
+import { store } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
 
 //State
 export const BOTS_PAGE_LIMIT = 100
 
-const AdminBotState = defineState({
-  name: 'AdminBotState',
-  initial: () => ({
-    bots: [] as Array<AdminBot>,
-    skip: 0,
-    limit: BOTS_PAGE_LIMIT,
-    total: 0,
-    retrieving: false,
-    fetched: false,
-    updateNeeded: true,
-    lastFetched: Date.now()
-  })
+const state = createState({
+  bots: [] as Array<AdminBot>,
+  skip: 0,
+  limit: BOTS_PAGE_LIMIT,
+  total: 0,
+  retrieving: false,
+  fetched: false,
+  updateNeeded: true,
+  lastFetched: Date.now()
 })
 
-const fetchedBotReceptor = (action: typeof AdminBotsActions.fetchedBot.matches._TYPE) => {
-  const state = getState(AdminBotState)
-  return state.merge({
-    bots: action.bots.data,
-    retrieving: false,
-    fetched: true,
-    updateNeeded: false,
-    lastFetched: Date.now()
-  })
-}
+store.receptors.push((action: BotsActionType): void => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'BOT_ADMIN_DISPLAY':
+        return s.merge({
+          bots: action.bots.data,
+          retrieving: false,
+          fetched: true,
+          updateNeeded: false,
+          lastFetched: Date.now()
+        })
+      case 'BOT_ADMIN_CREATE':
+        return s.merge({ updateNeeded: true })
+      case 'BOT_ADMIN_REMOVE':
+        return s.merge({ updateNeeded: true })
+      case 'BOT_ADMIN_UPDATE':
+        return s.merge({ updateNeeded: true })
+    }
+  }, action.type)
+})
 
-const botCreatedReceptor = (action: typeof AdminBotsActions.botCreated.matches._TYPE) => {
-  const state = getState(AdminBotState)
-  return state.merge({ updateNeeded: true })
-}
+export const accessBotState = () => state
 
-const botPatchedReceptor = (action: typeof AdminBotsActions.botPatched.matches._TYPE) => {
-  const state = getState(AdminBotState)
-  return state.merge({ updateNeeded: true })
-}
-
-const botRemovedReceptor = (action: typeof AdminBotsActions.botRemoved.matches._TYPE) => {
-  const state = getState(AdminBotState)
-  return state.merge({ updateNeeded: true })
-}
-
-export const AdminBotServiceReceptors = {
-  fetchedBotReceptor,
-  botCreatedReceptor,
-  botPatchedReceptor,
-  botRemovedReceptor
-}
-
-export const accessAdminBotState = () => getState(AdminBotState)
-
-export const useAdminBotState = () => useState(accessAdminBotState())
+export const useBotState = () => useState(state) as any as typeof state
 
 //Service
-export const AdminBotService = {
+export const BotService = {
   createBotAsAdmin: async (data: CreateBotAsAdmin) => {
+    const dispatch = useDispatch()
     try {
-      const bot = await API.instance.client.service('bot').create(data)
-      dispatchAction(AdminBotsActions.botCreated({ bot }))
+      const bot = await client.service('bot').create(data)
+      dispatch(BotsAction.botCreated(bot))
     } catch (error) {
       console.error(error)
     }
   },
   fetchBotAsAdmin: async (incDec?: 'increment' | 'decrement') => {
     try {
+      const dispatch = useDispatch()
       const user = accessAuthState().user
-      const skip = accessAdminBotState().skip.value
-      const limit = accessAdminBotState().limit.value
+      const skip = accessBotState().skip.value
+      const limit = accessBotState().limit.value
       if (user.userRole.value === 'admin') {
-        const bots = (await API.instance.client.service('bot').find({
+        const bots = (await client.service('bot').find({
           query: {
             $sort: {
               name: 1
@@ -87,45 +75,57 @@ export const AdminBotService = {
             action: 'admin'
           }
         })) as Paginated<AdminBot>
-        dispatchAction(AdminBotsActions.fetchedBot({ bots }))
+        dispatch(BotsAction.fetchedBot(bots))
       }
     } catch (error) {
       console.error(error)
     }
   },
   removeBots: async (id: string) => {
+    const dispatch = useDispatch()
     try {
-      const bot = (await API.instance.client.service('bot').remove(id)) as AdminBot
-      dispatchAction(AdminBotsActions.botRemoved({ bot }))
+      const bot = (await client.service('bot').remove(id)) as AdminBot
+      dispatch(BotsAction.botRemoved(bot))
     } catch (error) {
       console.error(error)
     }
   },
   updateBotAsAdmin: async (id: string, bot: CreateBotAsAdmin) => {
+    const dispatch = useDispatch()
     try {
-      const result = (await API.instance.client.service('bot').patch(id, bot)) as AdminBot
-      dispatchAction(AdminBotsActions.botPatched({ bot: result }))
+      const result = (await client.service('bot').patch(id, bot)) as AdminBot
+      dispatch(BotsAction.botPatched(result))
     } catch (error) {
       console.error(error)
     }
   }
 }
 //Action
-export class AdminBotsActions {
-  static fetchedBot = defineAction({
-    type: 'BOT_ADMIN_DISPLAY' as const,
-    bots: matches.object as Validator<unknown, Paginated<AdminBot>>
-  })
-  static botCreated = defineAction({
-    type: 'BOT_ADMIN_CREATE' as const,
-    bot: matches.object as Validator<unknown, AdminBot>
-  })
-  static botRemoved = defineAction({
-    type: 'BOT_ADMIN_REMOVE' as const,
-    bot: matches.object as Validator<unknown, AdminBot>
-  })
-  static botPatched = defineAction({
-    type: 'BOT_ADMIN_UPDATE' as const,
-    bot: matches.object as Validator<unknown, AdminBot>
-  })
+export const BotsAction = {
+  fetchedBot: (bots: Paginated<AdminBot>) => {
+    return {
+      type: 'BOT_ADMIN_DISPLAY' as const,
+      bots: bots
+    }
+  },
+  botCreated: (bot: AdminBot) => {
+    return {
+      type: 'BOT_ADMIN_CREATE' as const,
+      bot: bot
+    }
+  },
+  botRemoved: (bot: AdminBot) => {
+    return {
+      type: 'BOT_ADMIN_REMOVE' as const,
+      bot: bot
+    }
+  },
+  botPatched: (bot: AdminBot) => {
+    return {
+      type: 'BOT_ADMIN_UPDATE' as const,
+      bot: bot
+    }
+  }
 }
+
+export type BotsActionType = ReturnType<typeof BotsAction[keyof typeof BotsAction]>

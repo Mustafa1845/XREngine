@@ -4,8 +4,8 @@ import { UserRelationshipInterface } from '@xrengine/common/src/dbmodels/UserRel
 
 import { Application } from '../../../declarations'
 import logger from '../../logger'
+import userRalationshipDocs from './user-ralationship.docs'
 import { UserRelationship } from './user-relationship.class'
-import userRelationshipDocs from './user-relationship.docs'
 import hooks from './user-relationship.hooks'
 import createModel from './user-relationship.model'
 
@@ -28,7 +28,7 @@ export default (app: Application) => {
    * @author Vyacheslav Solovjov
    */
   const event = new UserRelationship(options, app)
-  event.docs = userRelationshipDocs
+  event.docs = userRalationshipDocs
   app.use('user-relationship', event)
 
   const service = app.service('user-relationship')
@@ -156,7 +156,6 @@ export default (app: Application) => {
 
   service.publish('removed', async (data: UserRelationshipInterface): Promise<any> => {
     try {
-      console.log('relationship removed data', data)
       const channel = await app.service('channel').Model.findOne({
         where: {
           [Op.or]: [

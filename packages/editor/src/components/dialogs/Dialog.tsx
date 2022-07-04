@@ -112,12 +112,12 @@ const DialogBottomNav = (styled as any).div`
 interface Props {
   tag?
   title?
+  onCancel?
+  cancelLabel?
+  onConfirm?
+  confirmLabel?
   bottomNav?
   children?
-  cancelLabel?
-  confirmLabel?
-  onCancel?
-  onConfirm?
 }
 
 /**
@@ -127,7 +127,10 @@ interface Props {
  * @param  {Props}
  * @constructor
  */
-const Dialog = ({ tag, title, bottomNav, children, cancelLabel, confirmLabel, onCancel, onConfirm }: Props) => {
+export function Dialog(props: Props) {
+  // initializing component properties using props.
+  const { tag, title, onCancel, cancelLabel, onConfirm, confirmLabel, bottomNav, children, ...rest } = props
+
   // callback function used to handle form submit
   const onSubmitForm = useCallback(
     (e) => {
@@ -147,7 +150,7 @@ const Dialog = ({ tag, title, bottomNav, children, cancelLabel, confirmLabel, on
 
   // returning view for Dialog component
   return (
-    <DialogContainer as={tag} onSubmit={onSubmitForm}>
+    <DialogContainer as={tag} onSubmit={onSubmitForm} {...rest}>
       <DialogHeader>
         <span>{title}</span>
       </DialogHeader>

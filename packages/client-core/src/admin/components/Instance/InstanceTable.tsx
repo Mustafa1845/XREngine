@@ -4,18 +4,16 @@ import { useTranslation } from 'react-i18next'
 import { Instance } from '@xrengine/common/src/interfaces/Instance'
 import { Location } from '@xrengine/common/src/interfaces/Location'
 
-import Box from '@mui/material/Box'
-
 import { useAuthState } from '../../../user/services/AuthService'
 import ConfirmModal from '../../common/ConfirmModal'
 import TableComponent from '../../common/Table'
 import { instanceColumns, InstanceData } from '../../common/variables/instance'
-import { AdminInstanceService, INSTANCE_PAGE_LIMIT, useAdminInstanceState } from '../../services/InstanceService'
+import { INSTANCE_PAGE_LIMIT, InstanceService, useInstanceState } from '../../services/InstanceService'
 import styles from '../../styles/admin.module.scss'
 
 interface Props {
-  className?: string
-  search: string
+  fetchAdminState?: any
+  search: any
 }
 
 /**
@@ -25,11 +23,12 @@ interface Props {
  * @returns DOM Element
  * @author KIMENYI Kevin
  */
-const InstanceTable = ({ className, search }: Props) => {
+const InstanceTable = (props: Props) => {
+  const { search } = props
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(INSTANCE_PAGE_LIMIT)
   const [refetch, setRefetch] = useState(false)
-  const [openConfirm, setOpenConfirm] = useState(false)
+  const [popConfirmOpen, setPopConfirmOpen] = useState(false)
   const [instanceId, setInstanceId] = useState('')
   const [instanceName, setInstanceName] = useState('')
   const [fieldOrder, setFieldOrder] = useState('asc')
@@ -37,23 +36,27 @@ const InstanceTable = ({ className, search }: Props) => {
   const { t } = useTranslation()
 
   const user = useAuthState().user
-  const adminInstanceState = useAdminInstanceState()
+  const adminInstanceState = useInstanceState()
   const adminInstances = adminInstanceState
 
   const handlePageChange = (event: unknown, newPage: number) => {
-    AdminInstanceService.fetchAdminInstances(search, newPage, sortField, fieldOrder)
+    InstanceService.fetchAdminInstances(search, newPage, sortField, fieldOrder)
     setPage(newPage)
   }
 
   useEffect(() => {
     if (adminInstanceState.fetched.value) {
-      AdminInstanceService.fetchAdminInstances(search, page, sortField, fieldOrder)
+      InstanceService.fetchAdminInstances(search, page, sortField, fieldOrder)
     }
   }, [fieldOrder])
 
+  const handleCloseModal = () => {
+    setPopConfirmOpen(false)
+  }
+
   const submitRemoveInstance = async () => {
-    await AdminInstanceService.removeInstance(instanceId)
-    setOpenConfirm(false)
+    await InstanceService.removeInstance(instanceId)
+    setPopConfirmOpen(false)
   }
 
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +84,7 @@ const InstanceTable = ({ className, search }: Props) => {
   React.useEffect(() => {
     if (!isMounted.current) return
     if ((user.id.value && adminInstances.updateNeeded.value) || refetch) {
-      AdminInstanceService.fetchAdminInstances(search, page, sortField, fieldOrder)
+      InstanceService.fetchAdminInstances(search, page, sortField, fieldOrder)
     }
     setRefetch(false)
   }, [user, adminInstanceState.updateNeeded.value, refetch])
@@ -103,12 +106,12 @@ const InstanceTable = ({ className, search }: Props) => {
       podName,
       action: (
         <a
-          href="#"
+          href="#h"
           className={styles.actionStyle}
           onClick={() => {
+            setPopConfirmOpen(true)
             setInstanceId(id)
             setInstanceName(ipAddress)
-            setOpenConfirm(true)
           }}
         >
           <span className={styles.spanDange}>{t('admin:components.locationModal.lbl-delete')}</span>
@@ -122,7 +125,7 @@ const InstanceTable = ({ className, search }: Props) => {
   )
 
   return (
-    <Box className={className}>
+    <React.Fragment>
       <TableComponent
         allowSort={false}
         fieldOrder={fieldOrder}
@@ -137,12 +140,13 @@ const InstanceTable = ({ className, search }: Props) => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       <ConfirmModal
-        open={openConfirm}
-        description={`${t('admin:components.instance.confirmInstanceDelete')} '${instanceName}'?`}
-        onClose={() => setOpenConfirm(false)}
-        onSubmit={submitRemoveInstance}
+        popConfirmOpen={popConfirmOpen}
+        handleCloseModal={handleCloseModal}
+        submit={submitRemoveInstance}
+        name={instanceName}
+        label={'instance'}
       />
-    </Box>
+    </React.Fragment>
   )
 }
 

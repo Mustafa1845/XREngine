@@ -62,7 +62,9 @@ interface ColorSelectionAreaProps {
   handleChangeColor: Function
 }
 
-const ColorSelectionArea = ({ mode, theme, handleChangeThemeMode, handleChangeColor }: ColorSelectionAreaProps) => {
+const ColorSelectionArea = (props: ColorSelectionAreaProps) => {
+  const { mode, theme, handleChangeThemeMode, handleChangeColor } = props
+
   return (
     <Grid container>
       <Grid item sm={12} md={12} marginTop="25px" marginBottom="15px">

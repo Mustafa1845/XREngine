@@ -11,6 +11,7 @@ export const EngineState = defineState({
   initial: {
     fixedTick: 0,
     isEngineInitialized: false,
+    sceneLoading: false,
     sceneLoaded: false,
     joinedWorld: false,
     loadingProgress: 0,
@@ -18,178 +19,216 @@ export const EngineState = defineState({
     isTeleporting: false,
     leaveWorld: false,
     socketInstance: false,
+    connectionTimeoutInstance: false,
     avatarTappedId: '' as UserId,
     userHasInteracted: false,
     interactionData: null! as InteractableComponentType,
     xrSupported: false,
-    xrSessionStarted: false,
     errorEntities: {} as { [key: Entity]: boolean },
     availableInteractable: null! as Entity,
     usersTyping: {} as { [key: string]: true }
   }
 })
 
-export function EngineEventReceptor(a) {
-  getState(EngineState).batch((s) => {
-    matches(a)
-      .when(EngineActions.browserNotSupported.matches, (action) => {})
-      .when(EngineActions.resetEngine.matches, (action) =>
-        s.merge({
-          socketInstance: action.instance
-        })
-      )
-      .when(EngineActions.userAvatarTapped.matches, (action) =>
-        s.merge({
-          avatarTappedId: action.userId
-        })
-      )
-      .when(EngineActions.initializeEngine.matches, (action) => s.merge({ isEngineInitialized: action.initialised }))
-      .when(EngineActions.sceneUnloaded.matches, (action) => s.merge({ sceneLoaded: false }))
-      .when(EngineActions.sceneLoaded.matches, (action) => s.merge({ sceneLoaded: true, loadingProgress: 100 }))
-      .when(EngineActions.joinedWorld.matches, (action) => {
-        s.merge({ joinedWorld: true })
+export function EngineEventReceptor(a: EngineActionType) {
+  const s = getEngineState()
+  matches(a)
+    .when(EngineActions.browserNotSupported.matches, (action) => {})
+    .when(EngineActions.resetEngine.matches, (action) =>
+      s.merge({
+        socketInstance: action.instance
       })
-      .when(EngineActions.sceneLoadingProgress.matches, (action) => s.merge({ loadingProgress: action.progress }))
-      .when(EngineActions.leaveWorld.matches, (action) => s.merge({ joinedWorld: false }))
-      .when(EngineActions.connectToWorld.matches, (action) => s.merge({ connectedWorld: action.connectedWorld }))
-      .when(EngineActions.objectActivation.matches, (action) => s.merge({ interactionData: action.interactionData }))
-      .when(EngineActions.setTeleporting.matches, (action) => {
-        if (action.isTeleporting) {
-          s.merge({
-            connectedWorld: false,
-            sceneLoaded: false,
-            joinedWorld: false
-          })
-        }
-        return s.merge({
-          isTeleporting: action.isTeleporting
-        })
+    )
+    .when(EngineActions.userAvatarTapped.matches, (action) =>
+      s.merge({
+        avatarTappedId: action.userId
       })
-      .when(EngineActions.setUserHasInteracted.matches, (action) => s.merge({ userHasInteracted: true }))
-      .when(EngineActions.updateEntityError.matches, (action) => s.errorEntities[action.entity].set(!action.isResolved))
-      .when(EngineActions.xrSupported.matches, (action) => s.xrSupported.set(action.xrSupported))
-      .when(EngineActions.xrStart.matches, (action) => s.xrSessionStarted.set(true))
-      .when(EngineActions.xrSession.matches, (action) => s.xrSessionStarted.set(true))
-      .when(EngineActions.xrEnd.matches, (action) => s.xrSessionStarted.set(false))
-      .when(EngineActions.availableInteractable.matches, (action) =>
-        s.availableInteractable.set(action.availableInteractable)
-      )
-  })
+    )
+    .when(EngineActions.initializeEngine.matches, (action) => s.merge({ isEngineInitialized: action.initialised }))
+    .when(EngineActions.sceneUnloaded.matches, (action) => s.merge({ sceneLoaded: false, sceneLoading: false }))
+    .when(EngineActions.sceneLoading.matches, (action) =>
+      s.merge({ sceneLoaded: false, sceneLoading: true, loadingProgress: 0 })
+    )
+    .when(EngineActions.sceneLoaded.matches, (action) =>
+      s.merge({ sceneLoaded: true, sceneLoading: false, loadingProgress: 100 })
+    )
+    .when(EngineActions.joinedWorld.matches, (action) => {
+      s.merge({ joinedWorld: true })
+      // if (s.sceneLoaded.value) {
+      //   s.merge({ loadingProgress: 100 })
+      // }
+    })
+    .when(EngineActions.sceneLoadingProgress.matches, (action) => s.merge({ loadingProgress: action.progress }))
+    .when(EngineActions.leaveWorld.matches, (action) => s.merge({ joinedWorld: false }))
+    .when(EngineActions.connectToWorld.matches, (action) => s.merge({ connectedWorld: action.connectedWorld }))
+    .when(EngineActions.connectToWorldTimeout.matches, (action) =>
+      s.merge({ connectionTimeoutInstance: action.instance })
+    )
+    .when(EngineActions.objectActivation.matches, (action) => s.merge({ interactionData: action.interactionData }))
+    .when(EngineActions.setTeleporting.matches, (action) => {
+      if (action.isTeleporting) {
+        s.merge({
+          connectedWorld: false,
+          sceneLoaded: false,
+          joinedWorld: false
+        })
+      }
+      return s.merge({
+        isTeleporting: action.isTeleporting
+      })
+    })
+    .when(EngineActions.setUserHasInteracted.matches, (action) => s.merge({ userHasInteracted: true }))
+    .when(EngineActions.updateEntityError.matches, (action) => s.errorEntities[action.entity].set(!action.isResolved))
+    .when(EngineActions.xrSupported.matches, (action) => s.xrSupported.set(action.xrSupported))
+    .when(EngineActions.availableInteractable.matches, (action) =>
+      s.availableInteractable.set(action.availableInteractable)
+    )
 }
 
 export const getEngineState = () => getState(EngineState)
 
 export const useEngineState = () => useState(getEngineState())
 
-export class EngineActions {
-  static userAvatarTapped = defineAction({
+export const EngineActions = {
+  userAvatarTapped: defineAction({
+    store: 'ENGINE',
     type: 'CORE_USER_AVATAR_TAPPED' as const,
     userId: matchesUserId
-  })
+  }),
 
-  static setTeleporting = defineAction({
+  setTeleporting: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SET_TELEPORTING' as const,
     isTeleporting: matches.boolean
-  })
+  }),
 
-  static resetEngine = defineAction({
+  resetEngine: defineAction({
+    store: 'ENGINE',
     type: 'CORE_RESET_ENGINE' as const,
     instance: matches.boolean
-  })
+  }),
 
-  static initializeEngine = defineAction({
+  initializeEngine: defineAction({
+    store: 'ENGINE',
     type: 'CORE_INITIALIZED_ENGINE' as const,
     initialised: matches.boolean
-  })
+  }),
 
-  static connectToWorld = defineAction({
+  connectToWorld: defineAction({
+    store: 'ENGINE',
     type: 'CORE_CONNECT_TO_WORLD' as const,
     connectedWorld: matches.boolean
-  })
+  }),
 
-  static joinedWorld = defineAction({
+  connectToWorldTimeout: defineAction({
+    store: 'ENGINE',
+    type: 'CORE_CONNECT_TO_WORLD_TIMEOUT' as const,
+    instance: matches.boolean
+  }),
+
+  joinedWorld: defineAction({
+    store: 'ENGINE',
     type: 'CORE_JOINED_WORLD' as const
-  })
+  }),
 
-  static leaveWorld = defineAction({
+  leaveWorld: defineAction({
+    store: 'ENGINE',
     type: 'CORE_LEAVE_WORLD' as const
-  })
+  }),
 
-  static sceneLoaded = defineAction({
+  sceneLoading: defineAction({
+    store: 'ENGINE',
+    type: 'CORE_SCENE_LOADING' as const
+  }),
+
+  sceneLoaded: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SCENE_LOADED' as const
-  })
+  }),
 
-  static sceneUnloaded = defineAction({
+  sceneUnloaded: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SCENE_UNLOADED' as const
-  })
+  }),
 
-  static sceneLoadingProgress = defineAction({
+  sceneLoadingProgress: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SCENE_LOADING_PROGRESS' as const,
     progress: matches.number
-  })
+  }),
 
-  static objectActivation = defineAction({
+  objectActivation: defineAction({
+    store: 'ENGINE',
     type: 'CORE_OBJECT_ACTIVATION' as const,
     interactionData: matches.any as Validator<unknown, InteractableComponentType>
-  })
+  }),
 
-  static availableInteractable = defineAction({
+  availableInteractable: defineAction({
+    store: 'ENGINE',
     type: 'CORE_AVAILABLE_INTERACTABLE' as const,
     availableInteractable: matches.any
-  })
+  }),
 
-  static xrStart = defineAction({
+  xrStart: defineAction({
+    store: 'ENGINE',
     type: 'CORE_XR_START' as const
-  })
+  }),
 
-  static xrSession = defineAction({
+  xrSession: defineAction({
+    store: 'ENGINE',
     type: 'CORE_XR_SESSION' as const
-  })
+  }),
 
-  static xrEnd = defineAction({
+  xrEnd: defineAction({
+    store: 'ENGINE',
     type: 'CORE_XR_END' as const
-  })
+  }),
 
-  static connect = defineAction({
+  connect: defineAction({
+    store: 'ENGINE',
     type: 'CORE_CONNECT' as const,
     id: matches.string
-  })
+  }),
 
-  static startSuspendedContexts = defineAction({
+  startSuspendedContexts: defineAction({
+    store: 'ENGINE',
     type: 'CORE_START_SUSPENDED_CONTEXTS' as const
-  })
+  }),
 
-  static suspendPositionalAudio = defineAction({
+  suspendPositionalAudio: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SUSPEND_POSITIONAL_AUDIO' as const
-  })
+  }),
 
-  static browserNotSupported = defineAction({
+  browserNotSupported: defineAction({
+    store: 'ENGINE',
     type: 'CORE_BROWSER_NOT_SUPPORTED' as const,
     msg: matches.string
-  })
+  }),
 
-  static setUserHasInteracted = defineAction({
+  setUserHasInteracted: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SET_USER_HAS_INTERACTED' as const
-  })
+  }),
 
-  static updateEntityError = defineAction({
+  updateEntityError: defineAction({
+    store: 'ENGINE',
     type: 'CORE_ENTITY_ERROR_UPDATE' as const,
     entity: matches.number as Validator<unknown, Entity>,
     isResolved: matches.boolean.optional()
-  })
+  }),
 
-  static xrSupported = defineAction({
+  xrSupported: defineAction({
+    store: 'ENGINE',
     type: 'CORE_XR_SUPPORTED' as const,
     xrSupported: matches.boolean
-  })
+  }),
 
-  static setupAnimation = defineAction({
+  setupAnimation: defineAction({
+    store: 'ENGINE',
     type: 'CORE_SETUP_ANIMATION' as const,
     entity: matches.number
   })
-
-  static spectateUser = defineAction({
-    type: 'CORE_SPECTATE_USER' as const,
-    user: matches.string
-  })
 }
+
+export type EngineActionType = ReturnType<typeof EngineActions[keyof typeof EngineActions]>

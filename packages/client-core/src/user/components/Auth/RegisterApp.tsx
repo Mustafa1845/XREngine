@@ -9,10 +9,15 @@ import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import OutlinedInput from '@mui/material/OutlinedInput'
 
+import { useDispatch } from '../../../store'
 import { AuthService } from '../../services/AuthService'
 import styles from './index.module.scss'
 
-const SignUp = (): JSX.Element => {
+interface Props {}
+
+const SignUp = (props: Props): JSX.Element => {
+  const dispatch = useDispatch()
+
   const initialState = {
     email: '',
     password: ''
@@ -143,4 +148,6 @@ const SignUp = (): JSX.Element => {
   )
 }
 
-export default SignUp
+const SignUpWrapper = (props: Props): JSX.Element => <SignUp {...props} />
+
+export default SignUpWrapper

@@ -11,7 +11,9 @@ import { AuthService } from '../../services/AuthService'
 import { useAuthState } from '../../services/AuthService'
 import styles from './index.module.scss'
 
-const ConfirmEmail = (): JSX.Element => {
+interface Props {}
+
+const ConfirmEmail = (props: Props): JSX.Element => {
   const auth = useAuthState()
   const { t } = useTranslation()
   const handleResendEmail = (e: any): any => {
@@ -48,4 +50,6 @@ const ConfirmEmail = (): JSX.Element => {
   )
 }
 
-export default ConfirmEmail
+const ConfirmEmailWrapper = (props): JSX.Element => <ConfirmEmail {...props} />
+
+export default ConfirmEmailWrapper

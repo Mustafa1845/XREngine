@@ -15,10 +15,8 @@ import { Object3DComponent } from '@xrengine/engine/src/scene/components/Object3
 import { TransformSpace } from '@xrengine/engine/src/scene/constants/transformConstants'
 import { registerPrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
 import { TransformComponent } from '@xrengine/engine/src/transform/components/TransformComponent'
-import { applyIncomingActions } from '@xrengine/hyperflux'
 
 import EditorCommands from '../constants/EditorCommands'
-import { deregisterEditorReceptors, registerEditorReceptors } from '../services/EditorServicesReceptor'
 import { accessSelectionState } from '../services/SelectionServices'
 import { PositionCommand, PositionCommandParams } from './PositionCommand'
 import { getRandomTransform } from './ReparentCommand.test'
@@ -34,8 +32,6 @@ describe('PositionCommand', () => {
 
   beforeEach(() => {
     createEngine()
-    registerEditorReceptors()
-    Engine.instance.store.defaultDispatchDelay = 0
     registerPrefabs(Engine.instance.currentWorld)
 
     rootNode = createEntityNode(createEntity())
@@ -104,14 +100,12 @@ describe('PositionCommand', () => {
       const sceneGraphChangeCounter = selectionState.sceneGraphChangeCounter.value
 
       PositionCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert.equal(sceneGraphChangeCounter, selectionState.sceneGraphChangeCounter.value)
     })
 
     it('will emit event if "preventEvents" is false', () => {
       command.preventEvents = false
       PositionCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert(true)
     })
   })
@@ -164,7 +158,6 @@ describe('PositionCommand', () => {
       }
 
       PositionCommand.update?.(command, newCommand)
-      applyIncomingActions()
 
       assert.deepEqual(command.positions, newCommand.positions)
     })
@@ -176,7 +169,6 @@ describe('PositionCommand', () => {
       command.positions = [getRandomPosition()]
 
       PositionCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const position = command.positions[i] ?? command.positions[0] ?? new Vector3()
         assert(getComponent(node.entity, TransformComponent).position.equals(position))
@@ -188,7 +180,6 @@ describe('PositionCommand', () => {
       command.positions = [getRandomPosition()]
 
       PositionCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const position = new Vector3()
         assert(getComponent(node.entity, TransformComponent).position.equals(position))
@@ -200,7 +191,6 @@ describe('PositionCommand', () => {
       command.positions = [getRandomPosition()]
 
       PositionCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         const position = new Vector3()
         assert(getComponent(node.entity, TransformComponent).position.equals(position))
@@ -218,7 +208,6 @@ describe('PositionCommand', () => {
       })
 
       PositionCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         assert(getComponent(node.entity, TransformComponent).position.equals(newPositions[i]))
       })
@@ -235,7 +224,6 @@ describe('PositionCommand', () => {
       })
 
       PositionCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         assert(getComponent(node.entity, TransformComponent).position.equals(newPositions[i]))
       })
@@ -252,7 +240,6 @@ describe('PositionCommand', () => {
       })
 
       PositionCommand.execute(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         assert(getComponent(node.entity, TransformComponent).position.equals(newPositions[i]))
       })
@@ -266,9 +253,7 @@ describe('PositionCommand', () => {
 
       PositionCommand.prepare(command)
       PositionCommand.execute(command)
-      applyIncomingActions()
       PositionCommand.undo(command)
-      applyIncomingActions()
 
       command.affectedNodes.forEach((node, i) => {
         assert(
@@ -284,9 +269,7 @@ describe('PositionCommand', () => {
 
       PositionCommand.prepare(command)
       PositionCommand.execute(command)
-      applyIncomingActions()
       PositionCommand.undo(command)
-      applyIncomingActions()
       command.affectedNodes.forEach((node, i) => {
         assert(getComponent(node.entity, TransformComponent).position.equals(command.undo?.positions[i]!))
       })
@@ -300,6 +283,5 @@ describe('PositionCommand', () => {
   afterEach(() => {
     emptyEntityTree(Engine.instance.currentWorld.entityTree)
     accessSelectionState().merge({ selectedEntities: [] })
-    deregisterEditorReceptors()
   })
 })

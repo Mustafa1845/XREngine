@@ -1,55 +1,54 @@
 import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
 import { AdminAwsSetting, PatchAwsSetting } from '@xrengine/common/src/interfaces/AdminAwsSetting'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
 
-import { API } from '../../../API'
 import { NotificationService } from '../../../common/services/NotificationService'
+import { client } from '../../../feathers'
+import { store, useDispatch } from '../../../store'
 
-const AdminAwsSettingState = defineState({
-  name: 'AdminAwsSettingState',
-  initial: () => ({
-    awsSettings: [] as Array<AdminAwsSetting>,
-    skip: 0,
-    limit: 100,
-    total: 0,
-    updateNeeded: true
-  })
+//State
+const state = createState({
+  awsSettings: [] as Array<AdminAwsSetting>,
+  skip: 0,
+  limit: 100,
+  total: 0,
+  updateNeeded: true
 })
 
-const awsSettingRetrievedReceptor = (action: typeof AdminAwsSettingActions.awsSettingRetrieved.matches._TYPE) => {
-  const state = getState(AdminAwsSettingState)
-  return state.merge({ awsSettings: action.awsSettings.data, updateNeeded: false })
-}
+store.receptors.push((action: AwsSettingActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'ADMIN_AWS_SETTING_FETCHED':
+        return s.merge({ awsSettings: action.adminAWSSetting.data, updateNeeded: false })
+      case 'ADMIN_AWS_SETTING_PATCHED':
+        return s.updateNeeded.set(true)
+    }
+  }, action.type)
+})
 
-const awsSettingPatchedReceptor = (action: typeof AdminAwsSettingActions.awsSettingPatched.matches._TYPE) => {
-  const state = getState(AdminAwsSettingState)
-  return state.updateNeeded.set(true)
-}
+export const accessAdminAwsSettingState = () => state
 
-export const AwsSettingReceptors = {
-  awsSettingRetrievedReceptor,
-  awsSettingPatchedReceptor
-}
+export const useAdminAwsSettingState = () => useState(state) as any as typeof state
 
-export const accessAdminAwsSettingState = () => getState(AdminAwsSettingState)
-
-export const useAdminAwsSettingState = () => useState(accessAdminAwsSettingState())
-
+//Service
 export const AwsSettingService = {
   fetchAwsSetting: async () => {
+    const dispatch = useDispatch()
+
     try {
-      const awsSettings = (await API.instance.client.service('aws-setting').find()) as Paginated<AdminAwsSetting>
-      dispatchAction(AdminAwsSettingActions.awsSettingRetrieved({ awsSettings }))
+      const awsSetting = (await client.service('aws-setting').find()) as Paginated<AdminAwsSetting>
+      dispatch(AwsSettingAction.awsSettingRetrieved(awsSetting))
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   patchAwsSetting: async (data: PatchAwsSetting, id: string) => {
+    const dispatch = useDispatch()
+
     try {
-      await API.instance.client.service('aws-setting').patch(id, data)
-      dispatchAction(AdminAwsSettingActions.awsSettingPatched())
+      await client.service('aws-setting').patch(id, data)
+      dispatch(AwsSettingAction.awsSettingPatched())
     } catch (err) {
       console.log(err)
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
@@ -57,13 +56,20 @@ export const AwsSettingService = {
   }
 }
 
-export class AdminAwsSettingActions {
+//Action
+export const AwsSettingAction = {
   // TODO: add interface
-  static awsSettingRetrieved = defineAction({
-    type: 'ADMIN_AWS_SETTING_FETCHED' as const,
-    awsSettings: matches.object as Validator<unknown, Paginated<AdminAwsSetting>>
-  })
-  static awsSettingPatched = defineAction({
-    type: 'ADMIN_AWS_SETTING_PATCHED' as const
-  })
+  awsSettingRetrieved: (adminAWSSetting: Paginated<AdminAwsSetting>) => {
+    return {
+      type: 'ADMIN_AWS_SETTING_FETCHED' as const,
+      adminAWSSetting: adminAWSSetting
+    }
+  },
+  awsSettingPatched: () => {
+    return {
+      type: 'ADMIN_AWS_SETTING_PATCHED' as const
+    }
+  }
 }
+
+export type AwsSettingActionType = ReturnType<typeof AwsSettingAction[keyof typeof AwsSettingAction]>

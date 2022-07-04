@@ -1,4 +1,7 @@
 {
+  "pageLoader": {
+    "loading": "Loading page..."
+  },
   "tooltip": {
     "pressKey": "Press {{tip}} to {{message}}"
   },
@@ -36,7 +39,8 @@
     "worldStore": "World Store",
     "engineStore": "Engine Store",
     "namedEntities": "Named Entities",
-    "networks": "Networks"
+    "networkObject": "Network Object",
+    "networkClients": "Network Clients"
   },
   "recording": {
     "videoRecorder": "Video recorder",

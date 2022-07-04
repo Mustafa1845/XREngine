@@ -1,3 +1,4 @@
+import { store } from '@xrengine/client-core/src/store'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import {
   ComponentConstructor,
@@ -5,7 +6,6 @@ import {
   getComponent
 } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { EntityNodeComponent } from '@xrengine/engine/src/scene/components/EntityNodeComponent'
-import { dispatchAction } from '@xrengine/hyperflux'
 
 import { CommandFuncType, CommandParams, ObjectCommands } from '../constants/EditorCommands'
 import arrayShallowEqual from '../functions/arrayShallowEqual'
@@ -104,8 +104,9 @@ function updateProperty<C extends ComponentConstructor<any, any>>(
           if (!result[finalProp]) result[finalProp] = new value.constructor()
           result[finalProp].copy(value)
         } else if (
-          typeof value !== 'undefined' &&
+          value &&
           typeof result[finalProp] === 'object' &&
+          'set' in result[finalProp] &&
           typeof result[finalProp].set === 'function'
         ) {
           result[finalProp].set(value)
@@ -113,7 +114,7 @@ function updateProperty<C extends ComponentConstructor<any, any>>(
           result[finalProp] = value
         }
 
-        dispatchAction(SelectionAction.changedObject({ objects: [command.affectedNodes[i]], propertyName }))
+        store.dispatch(SelectionAction.changedObject(command.affectedNodes[i], propertyName))
       }
     }
 
@@ -123,7 +124,7 @@ function updateProperty<C extends ComponentConstructor<any, any>>(
     }
   }
 
-  dispatchAction(EditorAction.sceneModified({ modified: true }))
+  store.dispatch(EditorAction.sceneModified(true))
 }
 
 function toString<C extends ComponentConstructor<any, any>>(command: ModifyPropertyCommandParams<C>) {

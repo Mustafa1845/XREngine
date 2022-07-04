@@ -10,10 +10,8 @@ import {
 } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
 import { createEngine } from '@xrengine/engine/src/initializeEngine'
 import { registerPrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
-import { applyIncomingActions } from '@xrengine/hyperflux'
 
 import EditorCommands from '../constants/EditorCommands'
-import { deregisterEditorReceptors, registerEditorReceptors } from '../services/EditorServicesReceptor'
 import { accessSelectionState } from '../services/SelectionServices'
 import { GroupCommand, GroupCommandParams } from './GroupCommand'
 
@@ -26,8 +24,6 @@ describe('GroupCommand', () => {
 
   beforeEach(() => {
     createEngine()
-    registerEditorReceptors()
-    Engine.instance.store.defaultDispatchDelay = 0
     registerPrefabs(Engine.instance.currentWorld)
 
     rootNode = createEntityNode(createEntity())
@@ -94,7 +90,6 @@ describe('GroupCommand', () => {
       const beforeSelectionChangeCounter = selectionState.beforeSelectionChangeCounter.value
 
       GroupCommand.emitEventBefore?.(command)
-      applyIncomingActions()
       assert.equal(beforeSelectionChangeCounter, selectionState.beforeSelectionChangeCounter.value)
     })
 
@@ -104,7 +99,6 @@ describe('GroupCommand', () => {
       const beforeSelectionChangeCounter = selectionState.beforeSelectionChangeCounter.value
 
       GroupCommand.emitEventBefore?.(command)
-      applyIncomingActions()
       assert.equal(beforeSelectionChangeCounter + 1, selectionState.beforeSelectionChangeCounter.value)
     })
   })
@@ -116,7 +110,6 @@ describe('GroupCommand', () => {
       const sceneGraphChangeCounter = selectionState.sceneGraphChangeCounter.value
 
       GroupCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert.equal(sceneGraphChangeCounter, selectionState.sceneGraphChangeCounter.value)
     })
 
@@ -126,7 +119,6 @@ describe('GroupCommand', () => {
       const sceneGraphChangeCounter = selectionState.sceneGraphChangeCounter.value
 
       GroupCommand.emitEventAfter?.(command)
-      applyIncomingActions()
       assert.equal(sceneGraphChangeCounter + 1, selectionState.sceneGraphChangeCounter.value)
     })
   })
@@ -134,7 +126,6 @@ describe('GroupCommand', () => {
   describe('execute function', async () => {
     it('duplicates objects', () => {
       GroupCommand.execute(command)
-      applyIncomingActions()
 
       assert(command.groupNode)
       assert(Engine.instance.currentWorld.entityTree.entityNodeMap.has(command.groupNode.entity))
@@ -148,7 +139,6 @@ describe('GroupCommand', () => {
     it('will update selection', () => {
       command.updateSelection = true
       GroupCommand.execute(command)
-      applyIncomingActions()
 
       assert(command.groupNode)
       assert(accessSelectionState().selectedEntities.value.includes(command.groupNode.entity))
@@ -160,10 +150,8 @@ describe('GroupCommand', () => {
       command.keepHistory = false
       GroupCommand.prepare(command)
       GroupCommand.execute(command)
-      applyIncomingActions()
 
       GroupCommand.undo(command)
-      applyIncomingActions()
 
       assert(command.groupNode)
       assert(Engine.instance.currentWorld.entityTree.entityNodeMap.has(command.groupNode.entity))
@@ -176,10 +164,8 @@ describe('GroupCommand', () => {
       command.keepHistory = true
       GroupCommand.prepare(command)
       GroupCommand.execute(command)
-      applyIncomingActions()
 
       GroupCommand.undo(command)
-      applyIncomingActions()
 
       assert(command.groupNode)
       assert(command.undo)
@@ -209,6 +195,5 @@ describe('GroupCommand', () => {
   afterEach(() => {
     emptyEntityTree(Engine.instance.currentWorld.entityTree)
     accessSelectionState().merge({ selectedEntities: [] })
-    deregisterEditorReceptors()
   })
 })

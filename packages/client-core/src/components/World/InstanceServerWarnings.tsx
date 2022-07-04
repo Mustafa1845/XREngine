@@ -8,23 +8,22 @@ import {
 import { MediaInstanceConnectionService } from '@xrengine/client-core/src/common/services/MediaInstanceConnectionService'
 import { useChatState } from '@xrengine/client-core/src/social/services/ChatService'
 import { useLocationState } from '@xrengine/client-core/src/social/services/LocationService'
-import { MediaStreams } from '@xrengine/client-core/src/transports/MediaStreams'
 import { SocketWebRTCClientNetwork } from '@xrengine/client-core/src/transports/SocketWebRTCClientNetwork'
 import { matches } from '@xrengine/engine/src/common/functions/MatchesUtils'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { useEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
+import { MediaStreams } from '@xrengine/engine/src/networking/systems/MediaStreamSystem'
 import { useEngineRendererState } from '@xrengine/engine/src/renderer/EngineRendererState'
 import WEBGL from '@xrengine/engine/src/renderer/THREE.WebGL'
 import { addActionReceptor } from '@xrengine/hyperflux'
 
 import { NetworkConnectionService } from '../../common/services/NetworkConnectionService'
-import WarningRetryModal, { WarningRetryModalProps } from '../AlertModals/WarningRetryModal'
+import WarningRefreshModal, { WarningRetryModalProps } from '../AlertModals/WarningRetryModal'
 
 const initialModalValues: WarningRetryModalProps = {
   open: false,
   title: '',
-  body: '',
-  onClose: () => {}
+  body: ''
 }
 
 enum WarningModalTypes {
@@ -125,8 +124,7 @@ const InstanceServerWarnings = () => {
           open: true,
           title: t('common:instanceServer.browserError'),
           body: t('common:instanceServer.browserErrorMessage'),
-          noCountdown: true,
-          onClose: () => {}
+          noCountdown: true
         })
         break
       }
@@ -139,8 +137,7 @@ const InstanceServerWarnings = () => {
           body: t('common:instanceServer.noAvailableServersMessage'),
           action: async () => LocationInstanceConnectionService.provisionServer(currentLocation.id),
           parameters: [currentLocation.id, erroredInstanceId, currentLocation.sceneId],
-          noCountdown: false,
-          onClose: () => {}
+          noCountdown: false
         })
         break
       }
@@ -158,8 +155,7 @@ const InstanceServerWarnings = () => {
           body: t('common:instanceServer.worldDisconnectedMessage'),
           action: async () => window.location.reload(),
           timeout: 30000,
-          noCountdown: false,
-          onClose: () => {}
+          noCountdown: false
         })
         break
       }
@@ -179,8 +175,7 @@ const InstanceServerWarnings = () => {
           body: "You've lost your connection with the media server. We'll try to reconnect when the following time runs out.",
           action: async () => MediaInstanceConnectionService.provisionServer(instanceChannel?.id, true),
           timeout: 15000,
-          noCountdown: false,
-          onClose: () => {}
+          noCountdown: false
         })
         break
       }
@@ -196,8 +191,7 @@ const InstanceServerWarnings = () => {
           title: t('common:instanceServer.webGLNotEnabled'),
           body: t('common:instanceServer.webGLNotEnabledMessage'),
           action: async () => window.location.reload(),
-          noCountdown: true,
-          onClose: () => {}
+          noCountdown: true
         })
         break
       }
@@ -207,8 +201,7 @@ const InstanceServerWarnings = () => {
           open: true,
           title: t('common:instanceServer.youKickedFromWorld'),
           body: `${t('common:instanceServer.youKickedFromWorldMessage')}: ${message}`,
-          noCountdown: true,
-          onClose: () => {}
+          noCountdown: true
         })
         break
       }
@@ -220,8 +213,7 @@ const InstanceServerWarnings = () => {
           body: `${t('common:instanceServer.cantFindLocation')} '${locationState.locationName.value}'. ${t(
             'common:instanceServer.misspelledOrNotExist'
           )}`,
-          noCountdown: true,
-          onClose: () => {}
+          noCountdown: true
         })
         break
       }
@@ -231,8 +223,7 @@ const InstanceServerWarnings = () => {
           open: true,
           title: t('common:instanceServer.low-frame-title'),
           body: t('common:instanceServer.low-frame-error'),
-          timeout: 10000,
-          onClose: () => {}
+          timeout: 10000
         })
         break
       }
@@ -249,10 +240,10 @@ const InstanceServerWarnings = () => {
   }
 
   return (
-    <WarningRetryModal
+    <WarningRefreshModal
       {...modalValues}
       open={modalValues.open && !engineState.isTeleporting.value}
-      onClose={() => reset()}
+      handleClose={() => reset()}
     />
   )
 }

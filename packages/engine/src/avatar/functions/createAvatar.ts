@@ -92,8 +92,7 @@ export const createAvatar = (spawnAction: typeof WorldNetworkAction.spawnAvatar.
     animationGraph: {
       states: {},
       transitionRules: {},
-      currentState: null!,
-      stateChanged: null!
+      currentState: null!
     },
     rig: {} as BoneStructure,
     rootYRatio: 1

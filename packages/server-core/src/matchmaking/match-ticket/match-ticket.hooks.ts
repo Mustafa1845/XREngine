@@ -21,7 +21,7 @@ export default {
     ],
     update: [disallow()],
     patch: [disallow()],
-    remove: [iff(isProvider('external'))]
+    remove: []
   },
 
   after: {

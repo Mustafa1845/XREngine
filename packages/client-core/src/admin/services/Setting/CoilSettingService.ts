@@ -1,47 +1,52 @@
 import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
 import { CoilSetting } from '@xrengine/common/src/interfaces/CoilSetting'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
 
-import { API } from '../../../API'
 import { NotificationService } from '../../../common/services/NotificationService'
+import { client } from '../../../feathers'
+import { store, useDispatch } from '../../../store'
 
-const AdminCoilSettingsState = defineState({
-  name: 'AdmindCoilSettingsState',
-  initial: () => ({
-    coil: [] as Array<CoilSetting>,
-    updateNeeded: true
-  })
+const state = createState({
+  coil: [] as Array<CoilSetting>,
+  updateNeeded: true
 })
 
-const fetchedCoilReceptor = (action: typeof AdminCoilSettingActions.fetchedCoil.matches._TYPE) => {
-  const state = getState(AdminCoilSettingsState)
-  return state.merge({ coil: action.coilSettings.data, updateNeeded: false })
-}
+store.receptors.push((action: CoilSettingActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'COIL_SETTING_DISPLAY':
+        return s.merge({ coil: action.coilSetting.data, updateNeeded: false })
+    }
+  }, action.type)
+})
 
-export const CoilSettingReceptors = {
-  fetchedCoilReceptor
-}
+export const accessCoilSettingState = () => state
 
-export const accessCoilSettingState = () => getState(AdminCoilSettingsState)
+export const useCoilSettingState = () => useState(state) as any as typeof state
 
-export const useCoilSettingState = () => useState(accessCoilSettingState())
-
-export const AdminCoilSettingService = {
+// Service
+export const CoilSettingService = {
   fetchCoil: async () => {
+    const dispatch = useDispatch()
+
     try {
-      const coilSettings = (await API.instance.client.service('coil-setting').find()) as Paginated<CoilSetting>
-      dispatchAction(AdminCoilSettingActions.fetchedCoil({ coilSettings }))
+      const coil = (await client.service('coil-setting').find()) as Paginated<CoilSetting>
+      dispatch(CoilSettingAction.fetchedCoil(coil))
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   }
 }
 
-export class AdminCoilSettingActions {
-  static fetchedCoil = defineAction({
-    type: 'COIL_SETTING_DISPLAY' as const,
-    coilSettings: matches.object as Validator<unknown, Paginated<CoilSetting>>
-  })
+// Action
+export const CoilSettingAction = {
+  fetchedCoil: (coilSetting: Paginated<CoilSetting>) => {
+    return {
+      type: 'COIL_SETTING_DISPLAY' as const,
+      coilSetting: coilSetting
+    }
+  }
 }
+
+export type CoilSettingActionType = ReturnType<typeof CoilSettingAction[keyof typeof CoilSettingAction]>

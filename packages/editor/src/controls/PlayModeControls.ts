@@ -1,7 +1,7 @@
+import { store, useDispatch } from '@xrengine/client-core/src/store'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { EngineRenderer } from '@xrengine/engine/src/renderer/WebGLRendererSystem'
 import { ObjectLayers } from '@xrengine/engine/src/scene/constants/ObjectLayers'
-import { dispatchAction } from '@xrengine/hyperflux'
 
 import { executeCommandWithHistory } from '../classes/History'
 import EditorCommands from '../constants/EditorCommands'
@@ -15,7 +15,7 @@ export function enterPlayMode(): void {
 
   EngineRenderer.instance.renderer.domElement.addEventListener('click', onClickCanvas)
   document.addEventListener('pointerlockchange', onPointerLockChange)
-  dispatchAction(EditorHelperAction.changedPlayMode({ isPlayModeEnabled: true }))
+  store.dispatch(EditorHelperAction.changedPlayMode(true))
 }
 
 export function leavePlayMode(): void {
@@ -23,14 +23,15 @@ export function leavePlayMode(): void {
 
   addInputActionMapping(ActionSets.EDITOR, EditorMapping)
 
-  dispatchAction(EditorHelperAction.changedFlyMode({ isFlyModeEnabled: false }))
+  const dispatch = useDispatch()
+  dispatch(EditorHelperAction.changedFlyMode(false))
   removeInputActionMapping(ActionSets.FLY)
 
   EngineRenderer.instance.renderer.domElement.removeEventListener('click', onClickCanvas)
   document.removeEventListener('pointerlockchange', onPointerLockChange)
   document.exitPointerLock()
 
-  dispatchAction(EditorHelperAction.changedPlayMode({ isPlayModeEnabled: false }))
+  store.dispatch(EditorHelperAction.changedPlayMode(false))
 }
 
 function onClickCanvas(): void {
@@ -38,15 +39,17 @@ function onClickCanvas(): void {
 }
 
 function onPointerLockChange(): void {
+  const dispatch = useDispatch()
+
   if (document.pointerLockElement === EngineRenderer.instance.renderer.domElement) {
-    dispatchAction(EditorHelperAction.changedFlyMode({ isFlyModeEnabled: true }))
+    dispatch(EditorHelperAction.changedFlyMode(true))
     addInputActionMapping(ActionSets.FLY, FlyMapping)
 
     removeInputActionMapping(ActionSets.EDITOR)
   } else {
     addInputActionMapping(ActionSets.EDITOR, EditorMapping)
 
-    dispatchAction(EditorHelperAction.changedFlyMode({ isFlyModeEnabled: false }))
+    dispatch(EditorHelperAction.changedFlyMode(false))
     removeInputActionMapping(ActionSets.FLY)
   }
 }

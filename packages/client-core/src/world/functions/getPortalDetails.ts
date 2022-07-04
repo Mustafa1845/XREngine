@@ -4,22 +4,22 @@ import { getComponent } from '@xrengine/engine/src/ecs/functions/ComponentFuncti
 import { PortalComponent } from '@xrengine/engine/src/scene/components/PortalComponent'
 import { setRemoteLocationDetail } from '@xrengine/engine/src/scene/functions/createPortal'
 
-import { API } from '../../API'
+import { client } from '../../feathers'
 
 export const getPortalDetails = () => {
   Engine.instance.currentWorld.portalQuery().map(async (entity: Entity): Promise<void> => {
     const portalComponent = getComponent(entity, PortalComponent)
     try {
-      const portalDetails = await API.instance.client.service('portal').get(portalComponent.linkedPortalId)
+      const portalDetails = await client.service('portal').get(portalComponent.linkedPortalId)
       if (portalDetails) {
         setRemoteLocationDetail(portalComponent, portalDetails.data.spawnPosition, portalDetails.data.spawnRotation)
-        // const envMapBakeDetails = await (
-        //   await fetch(`${SERVER_URL}/cubemap/${portalDetails.data.envMapBakeId}`, options)
+        // const cubemapBakeDetails = await (
+        //   await fetch(`${SERVER_URL}/cubemap/${portalDetails.data.cubemapBakeId}`, options)
         // ).json()
-        // // console.log('envMapBakeDetails', envMapBakeDetails)
-        // if (envMapBakeDetails) {
+        // // console.log('cubemapBakeDetails', cubemapBakeDetails)
+        // if (cubemapBakeDetails) {
         //   const textureLoader = new TextureLoader()
-        //   const texture = textureLoader.load(envMapBakeDetails.data.options.envMapOrigin)
+        //   const texture = textureLoader.load(cubemapBakeDetails.data.options.envMapOrigin)
         //   texture.mapping = EquirectangularRefractionMapping
 
         //   const portalMaterial = new MeshLambertMaterial({ envMap: texture, side: DoubleSide })

@@ -1,6 +1,5 @@
 import { Paginated } from '@feathersjs/feathers'
-import { none } from '@speigg/hookstate'
-import { useEffect } from 'react'
+import { createState, none, useState } from '@speigg/hookstate'
 
 import { Channel } from '@xrengine/common/src/interfaces/Channel'
 import { Group } from '@xrengine/common/src/interfaces/Group'
@@ -9,13 +8,16 @@ import { Message } from '@xrengine/common/src/interfaces/Message'
 import { Party } from '@xrengine/common/src/interfaces/Party'
 import { User } from '@xrengine/common/src/interfaces/User'
 import multiLogger from '@xrengine/common/src/logger'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
+import { handleCommand, isCommand } from '@xrengine/engine/src/common/functions/commandHandler'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
+import { isPlayerLocal } from '@xrengine/engine/src/networking/utils/isPlayerLocal'
 
-import { API } from '../../API'
+import { accessLocationInstanceConnectionState } from '../../common/services/LocationInstanceConnectionService'
 import { NotificationService } from '../../common/services/NotificationService'
+import { client } from '../../feathers'
+import { store, useDispatch } from '../../store'
 import { accessAuthState } from '../../user/services/AuthService'
+import { getChatMessageSystem, hasSubscribedToChatSystem, removeMessageSystem } from './utils/chatSystem'
 
 const logger = multiLogger.child({ component: 'client-core:social' })
 
@@ -28,41 +30,37 @@ interface ChatMessageProps {
 //State
 
 // TODO: find existing interfaces for these or move these to @xrengine/common/src/interfaces
-const ChatState = defineState({
-  name: 'ChatState',
-  initial: () => ({
-    channels: {
-      channels: [] as Channel[],
-      limit: 5,
-      skip: 0,
-      total: 0,
-      updateNeeded: true
-    },
-    targetObjectType: '',
-    targetObjectId: '',
-    targetObject: {} as User | Group | Party | Instance,
-    targetChannelId: '',
-    updateMessageScroll: false,
-    messageScrollInit: false,
-    instanceChannelFetching: false,
-    instanceChannelFetched: false,
-    messageCreated: false
-  })
+const state = createState({
+  channels: {
+    channels: [] as Channel[],
+    limit: 5,
+    skip: 0,
+    total: 0,
+    updateNeeded: true
+  },
+  targetObjectType: '',
+  targetObjectId: '',
+  targetObject: {} as User | Group | Party | Instance,
+  targetChannelId: '',
+  updateMessageScroll: false,
+  messageScrollInit: false,
+  instanceChannelFetching: false,
+  instanceChannelFetched: false,
+  messageCreated: false
 })
 
-export const ChatServiceReceptor = (action) => {
-  getState(ChatState).batch((s) => {
-    matches(action)
-      .when(ChatAction.loadedChannelsAction.matches, (action) => {
+store.receptors.push((action: ChatActionType) => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'LOADED_CHANNELS':
         return s.channels.merge({
-          limit: action.channels.limit,
-          skip: action.channels.skip,
-          total: action.channels.total,
+          limit: action.limit,
+          skip: action.skip,
+          total: action.total,
           updateNeeded: false,
-          channels: action.channels.data
+          channels: action.channels
         })
-      })
-      .when(ChatAction.loadedChannelAction.matches, (action) => {
+      case 'LOADED_CHANNEL': {
         let findIndex
         if (typeof action.channel.id === 'string')
           findIndex = s.channels.channels.findIndex((c) => c.id.value === action.channel.id)
@@ -80,8 +78,9 @@ export const ChatServiceReceptor = (action) => {
         }
         s.merge({ messageCreated: true })
         return
-      })
-      .when(ChatAction.createdMessageAction.matches, (action) => {
+      }
+
+      case 'CREATED_MESSAGE': {
         const channelId = action.message.channelId
         const selfUser = action.selfUser
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
@@ -115,8 +114,9 @@ export const ChatServiceReceptor = (action) => {
           })
         }
         return
-      })
-      .when(ChatAction.loadedMessagesAction.matches, (action) => {
+      }
+
+      case 'LOADED_MESSAGES': {
         const channelId = action.channelId
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
         if (channel) {
@@ -128,8 +128,9 @@ export const ChatServiceReceptor = (action) => {
         }
 
         return
-      })
-      .when(ChatAction.removedMessageAction.matches, (action) => {
+      }
+
+      case 'REMOVED_MESSAGE': {
         const channelId = action.message.channelId
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
         if (channel) {
@@ -140,8 +141,9 @@ export const ChatServiceReceptor = (action) => {
         }
 
         return
-      })
-      .when(ChatAction.patchedMessageAction.matches, (action) => {
+      }
+
+      case 'PATCHED_MESSAGE': {
         const channelId = action.message.channelId
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
         if (channel) {
@@ -152,8 +154,9 @@ export const ChatServiceReceptor = (action) => {
         }
 
         return
-      })
-      .when(ChatAction.createdChannelAction.matches, (action) => {
+      }
+
+      case 'CREATED_CHANNEL': {
         const channelId = action.channel.id
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
 
@@ -164,8 +167,9 @@ export const ChatServiceReceptor = (action) => {
         }
 
         return
-      })
-      .when(ChatAction.patchedChannelAction.matches, (action) => {
+      }
+
+      case 'PATCHED_CHANNEL': {
         const channelId = action.channel.id
         const channel = s.channels.channels.find((c) => c.id.value === channelId)
 
@@ -176,16 +180,18 @@ export const ChatServiceReceptor = (action) => {
         }
         s.merge({ messageCreated: false })
         return
-      })
-      .when(ChatAction.removedChannelAction.matches, (action) => {
+      }
+
+      case 'REMOVED_CHANNEL': {
         const channelId = action.channel.id
         const channelIdx = s.channels.channels.findIndex((c) => c.id.value === channelId)
         if (channelIdx > -1) {
           s.channels.channels[channelIdx].set(none)
         }
         return
-      })
-      .when(ChatAction.setChatTargetAction.matches, (action) => {
+      }
+
+      case 'CHAT_TARGET_SET':
         const { targetObjectType, targetObject, targetChannelId } = action
         return s.merge({
           targetObjectType: targetObjectType,
@@ -195,53 +201,56 @@ export const ChatServiceReceptor = (action) => {
           updateMessageScroll: true,
           messageScrollInit: true
         })
-      })
-      .when(ChatAction.setMessageScrollInitAction.matches, (action) => {
+
+      case 'SET_MESSAGE_SCROLL_INIT':
         const { value } = action
         return s.merge({ messageScrollInit: value })
-      })
-      .when(ChatAction.fetchingInstanceChannelAction.matches, () => {
+
+      case 'FETCHING_INSTANCE_CHANNEL':
         return s.merge({ instanceChannelFetching: true })
-      })
-      .when(ChatAction.setUpdateMessageScrollAction.matches, (action) => {
+
+      case 'SET_UPDATE_MESSAGE_SCROLL': {
         return s.merge({ updateMessageScroll: action.value })
-      })
-  })
-}
+      }
+    }
+  }, action.type)
+})
 
-export const accessChatState = () => getState(ChatState)
+export const accessChatState = () => state
 
-export const useChatState = () => useState(accessChatState())
+export const useChatState = () => useState(state) as any as typeof state
 
-globalThis.chatState = ChatState
+globalThis.chatState = state
 
 //Service
 export const ChatService = {
   getChannels: async (skip?: number, limit?: number) => {
+    const dispatch = useDispatch()
     try {
       const chatState = accessChatState().value
 
-      const channelResult = (await API.instance.client.service('channel').find({
+      const channelResult = (await client.service('channel').find({
         query: {
           $limit: limit != null ? limit : chatState.channels.limit,
           $skip: skip != null ? skip : chatState.channels.skip
         }
       })) as Paginated<Channel>
-      dispatchAction(ChatAction.loadedChannelsAction({ channels: channelResult }))
+      dispatch(ChatAction.loadedChannels(channelResult))
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   getInstanceChannel: async () => {
+    const dispatch = useDispatch()
     try {
-      const channelResult = (await API.instance.client.service('channel').find({
+      const channelResult = (await client.service('channel').find({
         query: {
           channelType: 'instance',
           instanceId: Engine.instance.currentWorld.worldNetwork.hostId
         }
       })) as Channel[]
       if (!channelResult.length) return setTimeout(() => ChatService.getInstanceChannel(), 2000)
-      dispatchAction(ChatAction.loadedChannelAction({ channel: channelResult[0], channelType: 'instance' }))
+      dispatch(ChatAction.loadedChannel(channelResult[0], 'instance'))
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
@@ -258,14 +267,14 @@ export const ChatService = {
         logger.warn({ data }, 'Invalid data, something is null.')
         return
       }
-      await API.instance.client.service('message').create(data)
+      await client.service('message').create(data)
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   sendChatMessage: (values: ChatMessageProps) => {
     try {
-      API.instance.client.service('message').create({
+      client.service('message').create({
         targetObjectId: values.targetObjectId,
         targetObjectType: values.targetObjectType,
         text: values.text
@@ -285,10 +294,11 @@ export const ChatService = {
     }
   },
   getChannelMessages: async (channelId: string, skip?: number, limit?: number) => {
+    const dispatch = useDispatch()
     if (channelId && channelId.length > 0) {
       try {
         const chatState = accessChatState().value
-        const messageResult = (await API.instance.client.service('message').find({
+        const messageResult = (await client.service('message').find({
           query: {
             channelId: channelId,
             $sort: {
@@ -298,7 +308,7 @@ export const ChatService = {
             $skip: skip != null ? skip : chatState.channels.channels[channelId].skip
           }
         })) as Paginated<Message>
-        dispatchAction(ChatAction.loadedMessagesAction({ channelId: channelId, messages: messageResult.data }))
+        dispatch(ChatAction.loadedMessages(channelId, messageResult))
       } catch (err) {
         NotificationService.dispatchNotify(err.message, { variant: 'error' })
       }
@@ -306,14 +316,14 @@ export const ChatService = {
   },
   removeMessage: async (messageId: string) => {
     try {
-      await API.instance.client.service('message').remove(messageId)
+      await client.service('message').remove(messageId)
     } catch (err) {
       NotificationService.dispatchNotify(err.message, { variant: 'error' })
     }
   },
   patchMessage: async (messageId: string, text: string) => {
     try {
-      await API.instance.client.service('message').patch(messageId, {
+      await client.service('message').patch(messageId, {
         text: text
       })
     } catch (err) {
@@ -321,28 +331,28 @@ export const ChatService = {
     }
   },
   updateChatTarget: async (targetObjectType: string, targetObject: any) => {
+    const dispatch = useDispatch()
     if (!targetObject) {
-      dispatchAction(
-        ChatAction.setChatTargetAction({ targetObjectType: targetObjectType, targetObject, targetChannelId: '' })
-      )
+      dispatch(ChatAction.setChatTarget(targetObjectType, targetObject, ''))
     } else {
-      const targetChannelResult = (await API.instance.client.service('channel').find({
+      const targetChannelResult = (await client.service('channel').find({
         query: {
           findTargetId: true,
           targetObjectType: targetObjectType,
           targetObjectId: targetObject.id
         }
       })) as Paginated<Channel>
-      dispatchAction(
-        ChatAction.setChatTargetAction({
-          targetObjectType: targetObjectType,
+      dispatch(
+        ChatAction.setChatTarget(
+          targetObjectType,
           targetObject,
-          targetChannelId: targetChannelResult.total > 0 ? targetChannelResult.data[0].id : ''
-        })
+          targetChannelResult.total > 0 ? targetChannelResult.data[0].id : ''
+        )
       )
     }
   },
   clearChatTargetIfCurrent: async (targetObjectType: string, targetObject: any) => {
+    const dispatch = useDispatch()
     const chatState = accessChatState().value
     const chatStateTargetObjectType = chatState.targetObjectType
     const chatStateTargetObjectId = chatState.targetObjectId
@@ -352,130 +362,154 @@ export const ChatService = {
         targetObject.relatedUserId === chatStateTargetObjectId ||
         targetObject.userId === chatStateTargetObjectId)
     ) {
-      dispatchAction(ChatAction.setChatTargetAction({ targetObjectType: '', targetObject: {}, targetChannelId: '' }))
+      dispatch(ChatAction.setChatTarget('', {}, ''))
     }
   },
   updateMessageScrollInit: async (value: boolean) => {
-    dispatchAction(ChatAction.setMessageScrollInitAction({ value }))
-  },
-  useAPIListeners: () => {
-    useEffect(() => {
-      const messageCreatedListener = (params) => {
-        const selfUser = accessAuthState().user.value
-        dispatchAction(ChatAction.createdMessageAction({ message: params.message, selfUser: selfUser }))
-      }
-
-      const messagePatchedListener = (params) => {
-        dispatchAction(ChatAction.patchedMessageAction({ message: params.message }))
-      }
-
-      const messageRemovedListener = (params) => {
-        dispatchAction(ChatAction.removedMessageAction({ message: params.message }))
-      }
-
-      const channelCreatedListener = (params) => {
-        dispatchAction(ChatAction.createdChannelAction({ channel: params.channel }))
-      }
-
-      const channelPatchedListener = (params) => {
-        dispatchAction(ChatAction.patchedChannelAction({ channel: params.channel }))
-      }
-
-      const channelRemovedListener = (params) => {
-        dispatchAction(ChatAction.removedChannelAction({ channel: params.channel }))
-      }
-
-      API.instance.client.service('message').on('created', messageCreatedListener)
-      API.instance.client.service('message').on('patched', messagePatchedListener)
-      API.instance.client.service('message').on('removed', messageRemovedListener)
-      API.instance.client.service('channel').on('created', channelCreatedListener)
-      API.instance.client.service('channel').on('patched', channelPatchedListener)
-      API.instance.client.service('channel').on('removed', channelRemovedListener)
-
-      return () => {
-        API.instance.client.service('message').off('created', messageCreatedListener)
-        API.instance.client.service('message').off('patched', messagePatchedListener)
-        API.instance.client.service('message').off('removed', messageRemovedListener)
-        API.instance.client.service('channel').off('created', channelCreatedListener)
-        API.instance.client.service('channel').off('patched', channelPatchedListener)
-        API.instance.client.service('channel').off('removed', channelRemovedListener)
-      }
-    }, [])
+    const dispatch = useDispatch()
+    dispatch(ChatAction.setMessageScrollInit(value))
   }
+}
+
+if (globalThis.process.env['VITE_OFFLINE_MODE'] !== 'true') {
+  client.service('message').on('created', (params) => {
+    const selfUser = accessAuthState().user.value
+    const { message } = params
+    if (message != undefined && message.text != undefined) {
+      if (isPlayerLocal(message.senderId)) {
+        if (handleCommand(message.text, Engine.instance.currentWorld.localClientEntity, message.senderId)) return
+        else {
+          const system = getChatMessageSystem(message.text)
+          if (system !== 'none') {
+            message.text = removeMessageSystem(message.text)
+            if (!hasSubscribedToChatSystem(selfUser.id, system)) return
+          }
+        }
+      } else {
+        const system = getChatMessageSystem(message.text)
+        if (system !== 'none') {
+          message.text = removeMessageSystem(message.text)
+          if (!hasSubscribedToChatSystem(selfUser.id, system)) return
+        } else if (isCommand(message.text)) return
+      }
+    }
+
+    const msg = ChatAction.createdMessage(params.message, selfUser)
+    if (msg != undefined) store.dispatch(msg)
+  })
+
+  client.service('message').on('patched', (params) => {
+    store.dispatch(ChatAction.patchedMessage(params.message))
+  })
+
+  client.service('message').on('removed', (params) => {
+    store.dispatch(ChatAction.removedMessage(params.message))
+  })
+
+  client.service('channel').on('created', (params) => {
+    store.dispatch(ChatAction.createdChannel(params.channel))
+  })
+
+  client.service('channel').on('patched', (params) => {
+    store.dispatch(ChatAction.patchedChannel(params.channel))
+  })
+
+  client.service('channel').on('removed', (params) => {
+    store.dispatch(ChatAction.removedChannel(params.channel))
+  })
 }
 
 //Action
 
-export class ChatAction {
-  static loadedChannelAction = defineAction({
-    type: 'LOADED_CHANNEL' as const,
-    channel: matches.object as Validator<unknown, Channel>,
-    channelType: matches.string
-  })
-
-  static loadedChannelsAction = defineAction({
-    type: 'LOADED_CHANNELS' as const,
-    channels: matches.any as Validator<unknown, Paginated<Channel>>
-  })
-
-  static createdMessageAction = defineAction({
-    type: 'CREATED_MESSAGE' as const,
-    message: matches.object as Validator<unknown, Message>,
-    selfUser: matches.object as Validator<unknown, User>
-  })
-
-  static patchedMessageAction = defineAction({
-    type: 'PATCHED_MESSAGE' as const,
-    message: matches.object as Validator<unknown, Message>
-  })
-
-  static removedMessageAction = defineAction({
-    type: 'REMOVED_MESSAGE' as const,
-    message: matches.object as Validator<unknown, Message>
-  })
-
-  static loadedMessagesAction = defineAction({
-    type: 'LOADED_MESSAGES' as const,
-    messages: matches.array as Validator<unknown, Message[]>,
-    limit: matches.any,
-    skip: matches.any,
-    total: matches.any,
-    channelId: matches.any
-  })
-
-  static setChatTargetAction = defineAction({
-    type: 'CHAT_TARGET_SET' as const,
-    targetObjectType: matches.any,
-    targetObject: matches.any,
-    targetChannelId: matches.any
-  })
-
-  static setMessageScrollInitAction = defineAction({
-    type: 'SET_MESSAGE_SCROLL_INIT' as const,
-    value: matches.boolean
-  })
-
-  static createdChannelAction = defineAction({
-    type: 'CREATED_CHANNEL' as const,
-    channel: matches.object as Validator<unknown, Channel>
-  })
-
-  static patchedChannelAction = defineAction({
-    type: 'PATCHED_CHANNEL' as const,
-    channel: matches.object as Validator<unknown, Channel>
-  })
-
-  static removedChannelAction = defineAction({
-    type: 'REMOVED_CHANNEL' as const,
-    channel: matches.object as Validator<unknown, Channel>
-  })
-
-  static fetchingInstanceChannelAction = defineAction({
-    type: 'FETCHING_INSTANCE_CHANNEL' as const
-  })
-
-  static setUpdateMessageScrollAction = defineAction({
-    type: 'SET_UPDATE_MESSAGE_SCROLL' as const,
-    value: matches.boolean
-  })
+export const ChatAction = {
+  loadedChannel: (channelResult: Channel, channelFetchedType: string) => {
+    return {
+      type: 'LOADED_CHANNEL' as const,
+      channel: channelResult,
+      channelType: channelFetchedType
+    }
+  },
+  loadedChannels: (channelResult: Paginated<Channel>) => {
+    return {
+      type: 'LOADED_CHANNELS' as const,
+      channels: channelResult.data,
+      limit: channelResult.limit,
+      skip: channelResult.skip,
+      total: channelResult.total
+    }
+  },
+  createdMessage: (message: Message, selfUser: User) => {
+    return {
+      type: 'CREATED_MESSAGE' as const,
+      message: message,
+      selfUser: selfUser
+    }
+  },
+  patchedMessage: (message: Message) => {
+    return {
+      type: 'PATCHED_MESSAGE' as const,
+      message: message
+    }
+  },
+  removedMessage: (message: Message) => {
+    return {
+      type: 'REMOVED_MESSAGE' as const,
+      message: message
+    }
+  },
+  loadedMessages: (channelId: string, messageResult: Paginated<Message>) => {
+    return {
+      type: 'LOADED_MESSAGES' as const,
+      messages: messageResult.data,
+      limit: messageResult.limit,
+      skip: messageResult.skip,
+      total: messageResult.total,
+      channelId: channelId
+    }
+  },
+  setChatTarget: (targetObjectType: string, targetObject: any, targetChannelId: string) => {
+    return {
+      type: 'CHAT_TARGET_SET' as const,
+      targetObjectType: targetObjectType,
+      targetObject: targetObject,
+      targetChannelId: targetChannelId
+    }
+  },
+  setMessageScrollInit: (value: boolean) => {
+    return {
+      type: 'SET_MESSAGE_SCROLL_INIT' as const,
+      value: value
+    }
+  },
+  createdChannel: (channel: Channel) => {
+    return {
+      type: 'CREATED_CHANNEL' as const,
+      channel: channel
+    }
+  },
+  patchedChannel: (channel: Channel) => {
+    return {
+      type: 'PATCHED_CHANNEL' as const,
+      channel: channel
+    }
+  },
+  removedChannel: (channel: Channel) => {
+    return {
+      type: 'REMOVED_CHANNEL' as const,
+      channel: channel
+    }
+  },
+  fetchingInstanceChannel: () => {
+    return {
+      type: 'FETCHING_INSTANCE_CHANNEL' as const
+    }
+  },
+  setUpdateMessageScroll: (value: boolean) => {
+    return {
+      type: 'SET_UPDATE_MESSAGE_SCROLL' as const,
+      value: value
+    }
+  }
 }
+
+export type ChatActionType = ReturnType<typeof ChatAction[keyof typeof ChatAction]>

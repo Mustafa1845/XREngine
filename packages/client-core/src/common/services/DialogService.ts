@@ -1,41 +1,47 @@
+import { createState, useState } from '@speigg/hookstate'
+
 import { DialogSeed } from '@xrengine/common/src/interfaces/Dialog'
-import { matches } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
+import { Dialog } from '@xrengine/common/src/interfaces/Dialog'
+
+import { store } from '../../store'
 
 //State
-const DialogState = defineState({
-  name: 'DialogState',
-  initial: () => ({
-    isOpened: false,
-    content: DialogSeed
-  })
+const state = createState({
+  isOpened: false,
+  content: DialogSeed
 })
 
-export const DialogServiceReceptor = (action) => {
-  getState(DialogState).batch((s) => {
-    matches(action)
-      .when(DialogAction.dialogShow.matches, (action) => {
+store.receptors.push((action: DialogActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'SHOW_DIALOG':
         return s.merge({ isOpened: true, content: action.content })
-      })
-      .when(DialogAction.dialogClose.matches, () => {
+      case 'CLOSE_DIALOG':
         return s.merge({ isOpened: false, content: DialogSeed })
-      })
-  })
-}
+      default:
+        break
+    }
+  }, action.type)
+})
 
-export const dialogState = () => getState(DialogState)
+export const dialogState = () => state
 
-export const useDialogState = () => useState(dialogState())
+export const useDialogState = () => useState(state) as any as typeof state
 
 //Action
-export class DialogAction {
-  static dialogShow = defineAction({
-    type: 'SHOW_DIALOG' as const,
-    content: matches.object
-  })
-
-  static dialogClose = defineAction({
-    type: 'CLOSE_DIALOG' as const,
-    content: matches.any
-  })
+export const DialogAction = {
+  dialogShow: (content: Dialog) => {
+    return {
+      type: 'SHOW_DIALOG' as const,
+      content
+    }
+  },
+  dialogClose: () => {
+    return {
+      type: 'CLOSE_DIALOG' as const,
+      content: undefined
+    }
+  }
 }
+
+export type DialogActionType = ReturnType<typeof DialogAction[keyof typeof DialogAction]>

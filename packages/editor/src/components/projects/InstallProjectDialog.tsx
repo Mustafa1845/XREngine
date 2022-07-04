@@ -11,12 +11,13 @@ import styles from './styles.module.scss'
 
 interface Props {
   open: boolean
-  onSuccess: (url: string) => Promise<void>
-  onClose: () => void
+  handleClose: any
+  installProject: (url: string) => Promise<void>
 }
 
-export const InstallProjectDialog = ({ open, onSuccess, onClose }: Props): any => {
+export const InstallProjectDialog = (props: Props): any => {
   const { t } = useTranslation()
+  const { open, handleClose, installProject } = props
 
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
@@ -27,7 +28,7 @@ export const InstallProjectDialog = ({ open, onSuccess, onClose }: Props): any =
 
     setProcessing(true)
     try {
-      await onSuccess(projectUrl)
+      await installProject(projectUrl)
       closeDialog()
     } catch (err) {
       setError(err.message)
@@ -44,7 +45,7 @@ export const InstallProjectDialog = ({ open, onSuccess, onClose }: Props): any =
 
   const closeDialog = () => {
     setProjectUrl('')
-    onClose()
+    handleClose()
   }
 
   return (
@@ -54,7 +55,7 @@ export const InstallProjectDialog = ({ open, onSuccess, onClose }: Props): any =
       onClose={closeDialog}
       closeAfterTransition
       TransitionComponent={Fade}
-      TransitionProps={{ in: open }}
+      TransitionProps={{ in: props.open }}
     >
       <DialogTitle>{t('editor.projects.installProject')}</DialogTitle>
       <DialogContent>

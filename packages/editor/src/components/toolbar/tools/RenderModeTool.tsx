@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react'
 
+import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { RenderModesType } from '@xrengine/engine/src/renderer/constants/RenderModes'
 import { RenderModes } from '@xrengine/engine/src/renderer/constants/RenderModes'
 import { EngineRendererAction, useEngineRendererState } from '@xrengine/engine/src/renderer/EngineRendererState'
@@ -23,7 +24,7 @@ const RenderModeTool = () => {
   }
 
   const onChangeRenderMode = useCallback((mode: RenderModesType) => {
-    dispatchAction(EngineRendererAction.changedRenderMode({ renderMode: mode }))
+    dispatchAction(EngineRendererAction.changedRenderMode(mode))
   }, [])
 
   return (

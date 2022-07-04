@@ -103,15 +103,8 @@ interface EnhancedTableProps {
   rowCount: number
 }
 
-function EnhancedTableHead({
-  classes,
-  onSelectAllClick,
-  order,
-  orderBy,
-  numSelected,
-  rowCount,
-  onRequestSort
-}: EnhancedTableProps) {
+function EnhancedTableHead(props: EnhancedTableProps) {
+  const { classes, onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } = props
   const createSortHandler = (property: keyof Data) => (event: React.MouseEvent<unknown>) => {
     onRequestSort(event, property)
   }
@@ -179,8 +172,9 @@ interface EnhancedTableToolbarProps {
   numSelected: number
 }
 
-const EnhancedTableToolbar = ({ numSelected }: EnhancedTableToolbarProps) => {
+const EnhancedTableToolbar = (props: EnhancedTableToolbarProps) => {
   const classes = useToolbarStyles()
+  const { numSelected } = props
 
   return (
     <Toolbar
@@ -340,9 +334,10 @@ export default function ApiLinks() {
                       <TableCell align="right">{row.description}</TableCell>
                       <TableCell align="right">{row.links}</TableCell>
                       <TableCell align="right">
-                        <a href="#" className="text-dark">
-                          {row.action}
-                        </a>
+                        <a href="#h" className="text-dark">
+                          {' '}
+                          {row.action}{' '}
+                        </a>{' '}
                       </TableCell>
                     </TableRow>
                   )

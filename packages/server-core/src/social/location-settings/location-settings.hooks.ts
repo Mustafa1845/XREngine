@@ -6,8 +6,8 @@ export default {
     find: [],
     get: [],
     create: [disallow('external')],
-    update: [disallow('external')],
-    patch: [disallow('external')],
+    update: [disallow()],
+    patch: [],
     remove: [disallow('external')]
   },
 

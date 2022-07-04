@@ -14,7 +14,7 @@ const sendOutgoingActions = (world: World) => {
   clearOutgoingActions(Engine.instance.store)
 }
 
-export default function OutgoingActionSystem(world: World) {
+export default async function OutgoingActionSystem(world: World) {
   return () => {
     sendOutgoingActions(world)
   }

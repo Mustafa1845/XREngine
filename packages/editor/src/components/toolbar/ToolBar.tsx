@@ -1,7 +1,6 @@
 import React from 'react'
 
 import MainMenu from '../mainMenu'
-import { WorldInstanceConnection } from '../realtime/WorldInstanceConnection'
 import * as styles from './styles.module.scss'
 import GridTool from './tools/GridTool'
 import HelperToggleTool from './tools/HelperToggleTool'
@@ -26,7 +25,6 @@ export const ToolBar = (props: ToolBarProps) => {
   return (
     <div style={{ pointerEvents: 'auto' }} className={styles.toolbarContainer}>
       <MainMenu commands={props.menu} />
-      <WorldInstanceConnection />
       <TransformTool />
       <TransformSpaceTool />
       <TransformPivotTool />

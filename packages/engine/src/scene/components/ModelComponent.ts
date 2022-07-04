@@ -6,7 +6,6 @@ export type ModelComponentType = {
   textureOverride: string
   materialOverrides: MaterialOverrideComponentType[]
   matrixAutoUpdate: boolean
-  useBasicMaterial: boolean
   isUsingGPUInstancing: boolean
   isDynamicObject: boolean
   curScr?: string

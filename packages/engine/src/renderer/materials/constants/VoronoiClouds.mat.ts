@@ -1,14 +1,16 @@
 import { ShaderMaterial } from 'three'
 
+import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
+
 import { MaterialParms } from '../MaterialParms'
-import { extractDefaults as format } from '../Utilities'
-import { Vec3Arg } from './DefaultArgs'
 
 export const vertexShader = `
 varying vec2 vUv;
+uniform float iTime;
 void main() {
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
+    vec3 offset = normal * sin(iTime * 3.14 + 400.0) * 2.0;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position + offset, 1);
 }
 `
 
@@ -166,17 +168,11 @@ void main()
 	gl_FragColor = vec4(sqrt(clamp(col, 0., 1.)), 1);
 }`
 
-export const DefaultArgs = {
-  iTime: { hide: true, default: 0 },
-  iResolution: Vec3Arg
-}
-
-export default function VoronoiClouds(args?: { iTime?: number; iResolution?: number[] }): MaterialParms {
-  const defaultArgs = format(DefaultArgs)
+export default async function VoronoiClouds(args?: { iTime?: number; iResolution?: number[] }): Promise<MaterialParms> {
   const mat = new ShaderMaterial({
     uniforms: {
-      iTime: { value: args?.iTime ?? defaultArgs.iTime },
-      iResolution: { value: args?.iResolution ?? defaultArgs.iResolution }
+      iTime: { value: args?.iTime ?? 0.0 },
+      iResolution: { value: args?.iResolution ?? [window.innerWidth / 4, window.innerHeight / 4, 1] }
     },
     vertexShader: vertexShader,
     fragmentShader: fragmentShader

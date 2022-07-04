@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { isShareAvailable } from '@xrengine/engine/src/common/functions/DetectFeatures'
@@ -15,13 +15,13 @@ import { useInviteState } from '../../../../social/services/InviteService'
 import { useAuthState } from '../../../services/AuthService'
 import styles from '../index.module.scss'
 
-export const useShareMenuHooks = ({ refLink }) => {
+const ShareMenu = (): JSX.Element => {
   const { t } = useTranslation()
   const [email, setEmail] = React.useState('')
+  const refLink = useRef() as React.MutableRefObject<HTMLInputElement>
   const postTitle = 'AR/VR world'
   const siteTitle = 'XREngine'
   const inviteState = useInviteState()
-
   const copyLinkToClipboard = () => {
     navigator.clipboard.writeText(refLink.current.value)
     NotificationService.dispatchNotify(t('user:usermenu.share.linkCopied'), { variant: 'success' })
@@ -71,25 +71,6 @@ export const useShareMenuHooks = ({ refLink }) => {
       return location
     }
   }
-
-  return {
-    copyLinkToClipboard,
-    shareOnApps,
-    packageInvite,
-    handleChang,
-    getInviteLink,
-    email
-  }
-}
-
-const ShareMenu = (): JSX.Element => {
-  const { t } = useTranslation()
-
-  const refLink = useRef() as React.MutableRefObject<HTMLInputElement>
-
-  const { copyLinkToClipboard, shareOnApps, packageInvite, handleChang, getInviteLink, email } = useShareMenuHooks({
-    refLink
-  })
 
   return (
     <div className={styles.menuPanel}>

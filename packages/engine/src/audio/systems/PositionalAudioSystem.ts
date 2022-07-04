@@ -5,12 +5,13 @@ import { addActionReceptor } from '@xrengine/hyperflux'
 import { AvatarComponent } from '../../avatar/components/AvatarComponent'
 import { matches } from '../../common/functions/MatchesUtils'
 import { Engine } from '../../ecs/classes/Engine'
-import { EngineActions } from '../../ecs/classes/EngineState'
+import { EngineActions, EngineActionType } from '../../ecs/classes/EngineState'
 import { Entity } from '../../ecs/classes/Entity'
 import { World } from '../../ecs/classes/World'
 import { addComponent, defineQuery, getComponent, hasComponent } from '../../ecs/functions/ComponentFunctions'
 import { LocalInputTagComponent } from '../../input/components/LocalInputTagComponent'
 import { NetworkObjectComponent } from '../../networking/components/NetworkObjectComponent'
+import { MediaStreams } from '../../networking/systems/MediaStreamSystem'
 import {
   PositionalAudioSettingsComponent,
   PositionalAudioSettingsComponentType
@@ -46,7 +47,7 @@ export default async function PositionalAudioSystem(world: World) {
 
   const avatarAudioStream: Map<Entity, any> = new Map()
 
-  function audioReceptors(action) {
+  function audioReceptors(action: EngineActionType) {
     matches(action)
       .when(EngineActions.startSuspendedContexts.matches, () => {
         console.log('starting suspended audio nodes')
@@ -87,8 +88,6 @@ export default async function PositionalAudioSystem(world: World) {
   }
 
   return () => {
-    const network = Engine.instance.currentWorld.mediaNetwork
-
     for (const entity of settingsQuery.enter()) {
       positionalAudioSettings = getComponent(entity, PositionalAudioSettingsComponent)
     }
@@ -102,8 +101,7 @@ export default async function PositionalAudioSystem(world: World) {
       const entityNetworkObject = getComponent(entity, NetworkObjectComponent)
       if (entityNetworkObject) {
         const peerId = entityNetworkObject.ownerId
-
-        const consumer = network?.consumers.find(
+        const consumer = MediaStreams.instance.consumers.find(
           (c: any) => c.appData.peerId === peerId && c.appData.mediaTag === 'cam-audio'
         )
         if (consumer == null && avatarAudioStream.get(entity) != null) {
@@ -127,7 +125,7 @@ export default async function PositionalAudioSystem(world: World) {
       let consumer
       if (entityNetworkObject != null) {
         const peerId = entityNetworkObject.ownerId
-        consumer = network?.consumers.find(
+        consumer = MediaStreams.instance.consumers.find(
           (c: any) => c.appData.peerId === peerId && c.appData.mediaTag === 'cam-audio'
         )
       }

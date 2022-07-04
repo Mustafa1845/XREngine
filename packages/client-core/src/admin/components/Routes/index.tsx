@@ -4,7 +4,11 @@ import styles from '../../styles/admin.module.scss'
 import RouteTable from './RouteTable'
 
 const Routes = () => {
-  return <RouteTable className={styles.rootTable} />
+  return (
+    <div className={styles.rootTable}>
+      <RouteTable />
+    </div>
+  )
 }
 
 export default Routes

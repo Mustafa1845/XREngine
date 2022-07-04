@@ -100,7 +100,7 @@ export const serializePortal: ComponentSerializeFunction = (entity) => {
       location: portalComponent.location,
       linkedPortalId: portalComponent.linkedPortalId,
       redirect: portalComponent.redirect,
-      // envMapBakeId: component.envMapBakeId, // TODO
+      // cubemapBakeId: component.cubemapBakeId, // TODO
       spawnPosition: helperTransform.position,
       spawnRotation: new Vector3().setFromEuler(new Euler().setFromQuaternion(helperTransform.rotation))
     }

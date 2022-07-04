@@ -1,12 +1,12 @@
 import React, { ChangeEvent, useEffect, useState } from 'react'
 
-import { Box, Checkbox } from '@mui/material'
+import { Checkbox } from '@mui/material'
 import CircularProgress from '@mui/material/CircularProgress'
 
 import { useAuthState } from '../../../user/services/AuthService'
 import TableComponent from '../../common/Table'
 import { routeColumns } from '../../common/variables/route'
-import { AdminActiveRouteService, useAdminActiveRouteState } from '../../services/ActiveRouteService'
+import { ActiveRouteService, useActiveRouteState } from '../../services/ActiveRouteService'
 import { RouteService, useRouteState } from '../../services/RouteService'
 import styles from '../../styles/admin.module.scss'
 
@@ -15,24 +15,20 @@ import styles from '../../styles/admin.module.scss'
  */
 const ROUTE_PAGE_LIMIT = 1000
 
-interface Props {
-  className?: string
-}
-
 /**
  *
  * @param props
  * @returns
  */
 
-const RouteTable = ({ className }: Props) => {
+const RouteTable = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(ROUTE_PAGE_LIMIT)
 
   const authState = useAuthState()
   const user = authState.user
   const adminRouteState = useRouteState()
-  const adminActiveRouteState = useAdminActiveRouteState()
+  const adminActiveRouteState = useActiveRouteState()
   const adminRoute = adminRouteState
   const activeRouteData = adminActiveRouteState.activeRoutes
   const installedRouteData = adminRoute.routes
@@ -41,20 +37,20 @@ const RouteTable = ({ className }: Props) => {
 
   const handlePageChange = (event: unknown, newPage: number) => {
     const incDec = page < newPage ? 'increment' : 'decrement'
-    AdminActiveRouteService.fetchActiveRoutes(incDec)
+    ActiveRouteService.fetchActiveRoutes(incDec)
     RouteService.fetchInstalledRoutes(incDec)
     setPage(newPage)
   }
 
   useEffect(() => {
     if (user?.id?.value && adminRoute.updateNeeded.value === true) {
-      AdminActiveRouteService.fetchActiveRoutes()
+      ActiveRouteService.fetchActiveRoutes()
       RouteService.fetchInstalledRoutes()
     }
   }, [authState.user?.id?.value, adminRouteState.updateNeeded.value])
 
   useEffect(() => {
-    AdminActiveRouteService.fetchActiveRoutes()
+    ActiveRouteService.fetchActiveRoutes()
     RouteService.fetchInstalledRoutes()
   }, [])
 
@@ -76,7 +72,7 @@ const RouteTable = ({ className }: Props) => {
   const activateCallback = (project: string, route: string, checked: boolean) => {
     // setProcessing(true)
     // setTimeout(() => {
-    AdminActiveRouteService.setRouteActive(project, route, checked)
+    ActiveRouteService.setRouteActive(project, route, checked)
     // }, 1000)
   }
 
@@ -102,7 +98,7 @@ const RouteTable = ({ className }: Props) => {
     .flat()
 
   return (
-    <Box className={className}>
+    <React.Fragment>
       <TableComponent
         allowSort={true}
         rows={installedRoutes}
@@ -118,7 +114,7 @@ const RouteTable = ({ className }: Props) => {
           <CircularProgress className={styles.progress} />
         </div>
       )}
-    </Box>
+    </React.Fragment>
   )
 }
 

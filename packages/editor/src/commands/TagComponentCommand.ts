@@ -1,3 +1,4 @@
+import { store } from '@xrengine/client-core/src/store'
 import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
 import {
   addComponent,
@@ -7,7 +8,6 @@ import {
   removeComponent
 } from '@xrengine/engine/src/ecs/functions/ComponentFunctions'
 import { EntityNodeComponent } from '@xrengine/engine/src/scene/components/EntityNodeComponent'
-import { dispatchAction } from '@xrengine/hyperflux'
 
 import { CommandFuncType, CommandParams, MiscCommands } from '../constants/EditorCommands'
 import { serializeObject3DArray, serializeProperties } from '../functions/debug'
@@ -67,8 +67,8 @@ function undo(command: TagComponentCommandParams) {
 function emitEventAfter(command: TagComponentCommandParams) {
   if (command.preventEvents) return
 
-  dispatchAction(EditorAction.sceneModified({ modified: true }))
-  dispatchAction(SelectionAction.changedObject({ objects: command.affectedNodes, propertyName: '' }))
+  store.dispatch(EditorAction.sceneModified(true))
+  store.dispatch(SelectionAction.changedObject(command.affectedNodes, undefined))
 }
 
 function update(command: TagComponentCommandParams, isUndo?: boolean) {

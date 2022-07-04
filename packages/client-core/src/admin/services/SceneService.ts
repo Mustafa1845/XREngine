@@ -1,56 +1,67 @@
-import { SceneMetadata } from '@xrengine/common/src/interfaces/SceneInterface'
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { defineAction, defineState, dispatchAction, getState, useState } from '@xrengine/hyperflux'
+import { Paginated } from '@feathersjs/feathers'
+import { createState, useState } from '@speigg/hookstate'
 
-import { API } from '../../API'
+import { SceneMetadata } from '@xrengine/common/src/interfaces/SceneInterface'
+
+import { client } from '../../feathers'
+import { store, useDispatch } from '../../store'
 
 //State
 export const SCENE_PAGE_LIMIT = 100
 
-const AdminSceneState = defineState({
-  name: 'AdminSceneState',
-  initial: () => ({
-    scenes: [] as Array<SceneMetadata>,
-    skip: 0,
-    limit: SCENE_PAGE_LIMIT,
-    total: 0,
-    retrieving: false,
-    fetched: false,
-    updateNeeded: true,
-    lastFetched: Date.now()
-  })
+const state = createState({
+  scenes: [] as Array<SceneMetadata>,
+  skip: 0,
+  limit: SCENE_PAGE_LIMIT,
+  total: 0,
+  retrieving: false,
+  fetched: false,
+  updateNeeded: true,
+  lastFetched: Date.now()
 })
 
-const scenesFetchedReceptor = (action: typeof AdminSceneActions.scenesFetched.matches._TYPE) => {
-  const state = getState(AdminSceneState)
-  return state.merge({
-    scenes: action.sceneData,
-    retrieving: false,
-    fetched: true,
-    updateNeeded: false,
-    lastFetched: Date.now()
-  })
-}
+store.receptors.push((action: SceneActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'ADMIN_SCENES_RETRIEVED':
+        return s.merge({
+          scenes: action.sceneData,
+          retrieving: false,
+          fetched: true,
+          updateNeeded: false,
+          lastFetched: Date.now()
+        })
+    }
+  }, action.type)
+})
 
-export const AdminSceneReceptors = {
-  scenesFetchedReceptor
-}
+export const accessSceneState = () => state
 
-export const accessAdminSceneState = () => getState(AdminSceneState)
+export const useSceneState = () => useState(state) as any as typeof state
 
-export const useAdminSceneState = () => useState(accessAdminSceneState())
-
-export const AdminSceneService = {
+export const SceneService = {
   fetchAdminScenes: async (incDec?: 'increment' | 'decrement' | 'all') => {
-    const scenes = await API.instance.client.service('scene').find()
-    dispatchAction(AdminSceneActions.scenesFetched({ sceneData: scenes.data }))
-  }
+    const dispatch = useDispatch()
+    const scenes = await client.service('scene').find()
+    dispatch(SceneAction.scenesFetched(scenes.data))
+  },
+
+  deleteScene: async (sceneId: string) => {}
 }
 
 //Action
-export class AdminSceneActions {
-  static scenesFetched = defineAction({
-    type: 'ADMIN_SCENES_RETRIEVED' as const,
-    sceneData: matches.array as Validator<unknown, SceneMetadata[]>
-  })
+export const SceneAction = {
+  scenesFetched: (sceneData: SceneMetadata[]) => {
+    return {
+      type: 'ADMIN_SCENES_RETRIEVED' as const,
+      sceneData
+    }
+  },
+  sceneCreated: () => {
+    return {
+      type: 'ADMIN_SCENE_CREATED' as const
+    }
+  }
 }
+
+export type SceneActionType = ReturnType<typeof SceneAction[keyof typeof SceneAction]>

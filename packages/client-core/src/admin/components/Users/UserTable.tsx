@@ -3,25 +3,25 @@ import { useTranslation } from 'react-i18next'
 
 import { User } from '@xrengine/common/src/interfaces/User'
 
-import Box from '@mui/material/Box'
-
 import { useAuthState } from '../../../user/services/AuthService'
 import ConfirmModal from '../../common/ConfirmModal'
+import { useFetchUsersAsAdmin } from '../../common/hooks/User.hooks'
 import TableComponent from '../../common/Table'
 import { userColumns, UserData, UserProps } from '../../common/variables/user'
-import { AdminUserService, USER_PAGE_LIMIT, useUserState } from '../../services/UserService'
+import { USER_PAGE_LIMIT, UserService, useUserState } from '../../services/UserService'
 import styles from '../../styles/admin.module.scss'
-import UserDrawer, { UserDrawerMode } from './UserDrawer'
+import ViewUser from './ViewUser'
 
-const UserTable = ({ className, search }: UserProps) => {
+const UserTable = (props: UserProps) => {
+  const { search } = props
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(USER_PAGE_LIMIT)
-  const [openConfirm, setOpenConfirm] = useState(false)
+  const [popConfirmOpen, setPopConfirmOpen] = useState(false)
   const [userId, setUserId] = useState('')
   const [userName, setUserName] = useState('')
   const [fieldOrder, setFieldOrder] = useState('asc')
   const [sortField, setSortField] = useState('name')
-  const [openUserDrawer, setOpenUserDrawer] = useState(false)
+  const [viewModal, setViewModal] = useState(false)
   const [userAdmin, setUserAdmin] = useState<User | null>(null)
   const authState = useAuthState()
   const user = authState.user
@@ -29,19 +29,16 @@ const UserTable = ({ className, search }: UserProps) => {
   const adminUsers = adminUserState.users.value
   const adminUserCount = adminUserState.total
   const { t } = useTranslation()
-
-  useEffect(() => {
-    AdminUserService.fetchUsersAsAdmin(search, 0, sortField, fieldOrder)
-  }, [search, user?.id?.value, adminUserState.updateNeeded.value])
+  useFetchUsersAsAdmin(user, adminUserState, UserService, search, sortField, fieldOrder)
 
   const handlePageChange = (event: unknown, newPage: number) => {
-    AdminUserService.fetchUsersAsAdmin(search, newPage, sortField, fieldOrder)
+    UserService.fetchUsersAsAdmin(search, newPage, sortField, fieldOrder)
     setPage(newPage)
   }
 
   useEffect(() => {
     if (adminUserState.fetched.value) {
-      AdminUserService.fetchUsersAsAdmin(search, page, sortField, fieldOrder)
+      UserService.fetchUsersAsAdmin(search, page, sortField, fieldOrder)
     }
   }, [fieldOrder])
 
@@ -50,9 +47,17 @@ const UserTable = ({ className, search }: UserProps) => {
     setPage(0)
   }
 
+  const closeViewModal = (open) => {
+    setViewModal(open)
+  }
+
+  const handleCloseModal = () => {
+    setPopConfirmOpen(false)
+  }
+
   const submitDeleteUser = async () => {
-    await AdminUserService.removeUserAdmin(userId)
-    setOpenConfirm(false)
+    await UserService.removeUserAdmin(userId)
+    setPopConfirmOpen(false)
   }
 
   const createData = (
@@ -77,23 +82,23 @@ const UserTable = ({ className, search }: UserProps) => {
       action: (
         <>
           <a
-            href="#"
+            href="#h"
             className={styles.actionStyle}
             onClick={() => {
               setUserAdmin(el)
-              setOpenUserDrawer(true)
+              setViewModal(true)
             }}
           >
             <span className={styles.spanWhite}>{t('admin:components.index.view')}</span>
           </a>
           {user.id.value !== id && (
             <a
-              href="#"
+              href="#h"
               className={styles.actionStyle}
               onClick={() => {
                 setUserId(id)
                 setUserName(name)
-                setOpenConfirm(true)
+                setPopConfirmOpen(true)
               }}
             >
               <span className={styles.spanDange}>{t('admin:components.index.delete')}</span>
@@ -131,7 +136,7 @@ const UserTable = ({ className, search }: UserProps) => {
   })
 
   return (
-    <Box className={className}>
+    <React.Fragment>
       <TableComponent
         allowSort={false}
         fieldOrder={fieldOrder}
@@ -146,20 +151,16 @@ const UserTable = ({ className, search }: UserProps) => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       <ConfirmModal
-        open={openConfirm}
-        description={`${t('admin:components.user.confirmUserDelete')} '${userName}'?`}
-        onClose={() => setOpenConfirm(false)}
-        onSubmit={submitDeleteUser}
+        popConfirmOpen={popConfirmOpen}
+        handleCloseModal={handleCloseModal}
+        submit={submitDeleteUser}
+        name={userName}
+        label={'user'}
       />
-      {userAdmin && openUserDrawer && (
-        <UserDrawer
-          open
-          mode={UserDrawerMode.ViewEdit}
-          selectedUser={userAdmin}
-          onClose={() => setOpenUserDrawer(false)}
-        />
+      {userAdmin && viewModal && (
+        <ViewUser openView={viewModal} userAdmin={userAdmin} closeViewModal={closeViewModal} />
       )}
-    </Box>
+    </React.Fragment>
   )
 }
 

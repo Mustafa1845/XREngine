@@ -13,9 +13,10 @@ interface Props {
   search: string
 }
 
-const SentInvite = ({ search }: Props) => {
+const SentInvite = (props: Props) => {
+  const { search } = props
   const [page, setPage] = useState(0)
-  const [openConfirm, setOpenConfirm] = useState(false)
+  const [popConfirmOpen, setPopConfirmOpen] = useState(false)
   const [inviteId, setInviteId] = useState('')
   const [inviteName, setInviteName] = useState('')
   const [rowsPerPage, setRowsPerPage] = useState(INVITE_PAGE_LIMIT)
@@ -28,7 +29,7 @@ const SentInvite = ({ search }: Props) => {
 
   const deleteInvite = () => {
     InviteService.removeInvite(inviteId)
-    setOpenConfirm(false)
+    handleCloseModal()
   }
 
   const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
@@ -46,6 +47,10 @@ const SentInvite = ({ search }: Props) => {
     setPage(0)
   }
 
+  const handleCloseModal = () => {
+    setPopConfirmOpen(false)
+  }
+
   const createData = (id: string, name: string, passcode: string, type: string) => {
     return {
       id,
@@ -55,12 +60,12 @@ const SentInvite = ({ search }: Props) => {
       action: (
         <>
           <a
-            href="#"
+            href="#h"
             className={styles.actionStyle}
             onClick={() => {
+              setPopConfirmOpen(true)
               setInviteId(id)
               setInviteName(name)
-              setOpenConfirm(true)
             }}
           >
             <span className={styles.spanDange}>{t('admin:components.index.delete')}</span>
@@ -88,10 +93,11 @@ const SentInvite = ({ search }: Props) => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       <ConfirmModal
-        open={openConfirm}
-        description={`${t('admin:components.invite.confirmInviteDelete')} '${inviteName}'?`}
-        onClose={() => setOpenConfirm(false)}
-        onSubmit={deleteInvite}
+        popConfirmOpen={popConfirmOpen}
+        handleCloseModal={handleCloseModal}
+        submit={deleteInvite}
+        name={inviteName}
+        label={'invite'}
       />
     </React.Fragment>
   )

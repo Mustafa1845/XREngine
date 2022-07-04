@@ -10,19 +10,13 @@ export class LinkedInStrategy extends CustomOAuthStrategy {
     this.app = app
   }
 
-  async getEntityData(profile: any, entity: any, params: Params): Promise<any> {
+  async getEntityData(profile: any, params: Params): Promise<any> {
     const baseData = await super.getEntityData(profile, null, {})
-    const authResult = await (this.app.service('authentication') as any).strategies.jwt.authenticate(
-      { accessToken: params?.authentication?.accessToken },
-      {}
-    )
-    const identityProvider = authResult['identity-provider']
-    const userId = identityProvider ? identityProvider.userId : params?.query ? params.query.userId : undefined
-
+    const userId = params?.query ? params.query.userId : undefined
     return {
       ...baseData,
       email: profile.email,
-      type: 'linkedin',
+      type: 'linkdlin',
       userId
     }
   }
@@ -51,28 +45,20 @@ export class LinkedInStrategy extends CustomOAuthStrategy {
       await this.app.service('user-api-key').create({
         userId: entity.userId
       })
-    if (entity.type !== 'guest' && identityProvider.type === 'guest') {
+    if (entity.type !== 'guest') {
       await this.app.service('identity-provider').remove(identityProvider.id)
       await this.app.service('user').remove(identityProvider.userId)
-      return super.updateEntity(entity, profile, params)
     }
-    const existingEntity = await super.findEntity(profile, params)
-    if (!existingEntity) {
-      profile.userId = user.id
-      const newIP = await super.createEntity(profile, params)
-      if (entity.type === 'guest') await this.app.service('identity-provider').remove(entity.id)
-      return newIP
-    } else if (existingEntity.userId === identityProvider.userId) return existingEntity
-    else {
-      throw new Error('Another user is linked to this account')
-    }
+    return super.updateEntity(entity, profile, params)
   }
 
   async getRedirect(data: any, params: Params): Promise<string> {
     const redirectHost = config.authentication.callback.linkedin
     const type = params?.query?.userId ? 'connection' : 'login'
+
     if (Object.getPrototypeOf(data) === Error.prototype) {
       const err = data.message as string
+
       return redirectHost + `?error=${err}`
     } else {
       const token = data.accessToken as string
@@ -88,8 +74,10 @@ export class LinkedInStrategy extends CustomOAuthStrategy {
       let returned = redirectHost + `?token=${token}&type=${type}`
       if (path != null) returned = returned.concat(`&path=${path}`)
       if (instanceId != null) returned = returned.concat(`&instanceId=${instanceId}`)
+
       return returned
     }
   }
 }
+
 export default LinkedInStrategy

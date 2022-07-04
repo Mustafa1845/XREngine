@@ -12,19 +12,28 @@ import Modal from '@mui/material/Modal'
 import styles from '../styles/admin.module.scss'
 
 interface Props {
-  open: boolean
-  description: string | JSX.Element
+  popConfirmOpen: boolean
+  handleCloseModal: () => void
+  submit: () => void
+  name: string | JSX.Element
+  label: string
+  type?: string
   processing?: boolean
-  onClose: () => void
-  onSubmit: () => void
 }
 
-const ConfirmModal = ({ open, description, processing, onClose, onSubmit }: Props) => {
+const ConfirmModal = (props: Props) => {
   const { t } = useTranslation()
-
+  const { popConfirmOpen, handleCloseModal, submit, name, label, type, processing } = props
   return (
-    <Modal open={open} onClose={onClose} className={styles.modal} closeAfterTransition>
-      <Fade in={open}>
+    <Modal
+      open={popConfirmOpen}
+      onClose={handleCloseModal}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description"
+      className={styles.modal}
+      closeAfterTransition
+    >
+      <Fade in={popConfirmOpen}>
         <div
           className={classNames({
             [styles.paper]: true,
@@ -34,13 +43,13 @@ const ConfirmModal = ({ open, description, processing, onClose, onSubmit }: Prop
           {!processing && (
             <div>
               <DialogTitle id="alert-dialog-title" style={{ color: 'gray' }}>
-                {description}
+                {t('admin:components.common.doYouWantTo')} {type || 'delete'} {label} <b>{name}</b> ?
               </DialogTitle>
               <DialogActions>
-                <Button onClick={onClose} className={styles.spanNone}>
+                <Button onClick={handleCloseModal} className={styles.spanNone}>
                   {t('admin:components.common.cancel')}
                 </Button>
-                <Button className={styles.spanDange} onClick={onSubmit} autoFocus>
+                <Button className={styles.spanDange} onClick={submit} autoFocus>
                   {t('admin:components.common.confirm')}
                 </Button>
               </DialogActions>

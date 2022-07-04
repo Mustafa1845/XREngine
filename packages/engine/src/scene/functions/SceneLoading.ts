@@ -6,16 +6,21 @@ import { precacheSupport } from '@xrengine/engine/src/assets/enum/AssetType'
 import { dispatchAction } from '@xrengine/hyperflux'
 
 import { AssetLoader } from '../../assets/classes/AssetLoader'
-import { delay } from '../../common/functions/delay'
 import { Engine } from '../../ecs/classes/Engine'
 import { EngineActions, getEngineState } from '../../ecs/classes/EngineState'
 import { Entity } from '../../ecs/classes/Entity'
 import { EntityTreeNode } from '../../ecs/classes/EntityTree'
-import { addComponent, getComponent, hasComponent } from '../../ecs/functions/ComponentFunctions'
+import {
+  addComponent,
+  getComponent,
+  getComponentCountOfType,
+  hasComponent
+} from '../../ecs/functions/ComponentFunctions'
 import { unloadScene } from '../../ecs/functions/EngineFunctions'
 import { createEntity } from '../../ecs/functions/EntityFunctions'
 import { addEntityNodeInTree, createEntityNode } from '../../ecs/functions/EntityTreeFunctions'
 import { initSystems, SystemModuleType } from '../../ecs/functions/SystemFunctions'
+import { EngineRendererAction } from '../../renderer/EngineRendererState'
 import { DisableTransformTagComponent } from '../../transform/components/DisableTransformTagComponent'
 import { TransformComponent } from '../../transform/components/TransformComponent'
 import { EntityNodeComponent } from '../components/EntityNodeComponent'
@@ -28,12 +33,12 @@ import { ObjectLayers } from '../constants/ObjectLayers'
 import { resetEngineRenderer } from './loaders/RenderSettingsFunction'
 import { ScenePrefabTypes } from './registerPrefabs'
 
-export const createNewEditorNode = (entityNode: EntityTreeNode, prefabType: ScenePrefabTypes): void => {
+export const createNewEditorNode = (entity: Entity, prefabType: ScenePrefabTypes): void => {
   // Clone the defualt values so that it will not be bound to newly created node
   const components = cloneDeep(Engine.instance.currentWorld.scenePrefabRegistry.get(prefabType))
   if (!components) return console.warn(`[createNewEditorNode]: ${prefabType} is not a prefab`)
 
-  loadSceneEntity(entityNode, { name: prefabType, components })
+  loadSceneEntity(createEntityNode(entity), { name: prefabType, components })
 }
 
 export const preCacheAssets = (sceneData: any, onProgress) => {
@@ -130,9 +135,9 @@ export const loadECSData = async (sceneData: SceneJson, assetRoot = undefined): 
  * @param sceneData
  */
 export const loadSceneFromJSON = async (sceneData: SceneJson, sceneSystems: SystemModuleType<any>[]) => {
-  const world = Engine.instance.currentWorld
+  unloadScene(Engine.instance.currentWorld)
 
-  EngineActions.sceneLoadingProgress({ progress: 0 })
+  dispatchAction(EngineActions.sceneLoading())
 
   let promisesCompleted = 0
   const onProgress = () => {
@@ -149,16 +154,13 @@ export const loadSceneFromJSON = async (sceneData: SceneJson, sceneSystems: Syst
   }
   const promises = preCacheAssets(sceneData, onProgress)
 
+  // todo: move these layer enable & disable to loading screen thing or something so they work with portals properly
+  if (!getEngineState().isTeleporting.value) Engine.instance.currentWorld.camera?.layers.disable(ObjectLayers.Scene)
+
   promises.forEach((promise) => promise.then(onComplete))
   await Promise.all(promises)
 
-  // todo: move these layer enable & disable to loading screen thing or something so they work with portals properly
-  if (!getEngineState().isTeleporting.value) world.camera?.layers.disable(ObjectLayers.Scene)
-
-  // this needs to occur after the asset promises
-  await unloadScene(world)
-
-  await initSystems(world, sceneSystems)
+  initSystems(Engine.instance.currentWorld, sceneSystems)
 
   const entityMap = {} as { [key: string]: EntityTreeNode }
 
@@ -173,16 +175,16 @@ export const loadSceneFromJSON = async (sceneData: SceneJson, sceneSystems: Syst
     loadSceneEntity(entityMap[key], sceneData.entities[key])
   })
 
-  const tree = world.entityTree
-  addComponent(tree.rootNode.entity, Object3DComponent, { value: world.scene })
+  const tree = Engine.instance.currentWorld.entityTree
+  addComponent(tree.rootNode.entity, Object3DComponent, { value: Engine.instance.currentWorld.scene })
   addComponent(tree.rootNode.entity, SceneTagComponent, {})
   getComponent(tree.rootNode.entity, EntityNodeComponent).components.push(SCENE_COMPONENT_SCENE_TAG)
 
+  dispatchAction(EngineRendererAction.setPostProcessing(getComponentCountOfType(PostprocessingComponent) > 0))
+
   if (!getEngineState().isTeleporting.value) Engine.instance.currentWorld.camera?.layers.enable(ObjectLayers.Scene)
 
-  // TODO: Have to wait because scene is not being fully loaded at this moment
-  await delay(200)
-  dispatchAction(EngineActions.sceneLoaded())
+  dispatchAction(EngineActions.sceneLoaded()) //.delay(0.1)
 }
 
 /**

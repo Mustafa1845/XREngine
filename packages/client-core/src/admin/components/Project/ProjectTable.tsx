@@ -7,8 +7,7 @@ import Cached from '@mui/icons-material/Cached'
 import Cross from '@mui/icons-material/Cancel'
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import Box from '@mui/material/Box'
-import IconButton from '@mui/material/IconButton'
+import Button from '@mui/material/Button'
 
 import { PROJECT_PAGE_LIMIT, ProjectService, useProjectState } from '../../../common/services/ProjectService'
 import { useAuthState } from '../../../user/services/AuthService'
@@ -18,11 +17,7 @@ import { projectsColumns } from '../../common/variables/projects'
 import styles from '../../styles/admin.module.scss'
 import ViewProjectFiles from './ViewProjectFiles'
 
-interface Props {
-  className?: string
-}
-
-const ProjectTable = ({ className }: Props) => {
+export default function ProjectTable() {
   const { t } = useTranslation()
   const [processing, setProcessing] = useState(false)
   const [popupReuploadConfirmOpen, setPopupReuploadConfirmOpen] = useState(false)
@@ -144,45 +139,57 @@ const ProjectTable = ({ className }: Props) => {
       update: (
         <>
           {user.userRole.value === 'admin' && (
-            <IconButton
-              className={styles.iconButton}
-              name="update"
+            <Button
+              className={styles.checkboxButton}
               disabled={el.repositoryPath === null && name !== 'default-project'}
               onClick={() => handleOpenReuploadConfirmation(el)}
+              name="stereoscopic"
+              color="primary"
             >
               <Cached />
-            </IconButton>
+            </Button>
           )}
         </>
       ),
       invalidate: (
         <>
           {user.userRole.value === 'admin' && (
-            <IconButton
-              className={styles.iconButton}
-              name="invalidate"
+            <Button
+              className={styles.checkboxButton}
               onClick={() => handleOpenInvaliateConfirmation(el)}
+              name="stereoscopic"
+              color="primary"
             >
               <CleaningServicesIcon />
-            </IconButton>
+            </Button>
           )}
         </>
       ),
       view: (
         <>
           {user.userRole.value === 'admin' && (
-            <IconButton className={styles.iconButton} name="view" onClick={() => handleViewProject(name)}>
+            <Button
+              className={styles.checkboxButton}
+              onClick={() => handleViewProject(name)}
+              name="stereoscopic"
+              color="primary"
+            >
               <VisibilityIcon />
-            </IconButton>
+            </Button>
           )}
         </>
       ),
       action: (
         <>
           {user.userRole.value === 'admin' && (
-            <IconButton className={styles.iconButton} name="remove" onClick={() => handleOpenRemoveConfirmation(el)}>
+            <Button
+              className={styles.checkboxButton}
+              onClick={() => handleOpenRemoveConfirmation(el)}
+              name="stereoscopic"
+              color="primary"
+            >
               <Cross />
-            </IconButton>
+            </Button>
           )}
         </>
       )
@@ -194,7 +201,7 @@ const ProjectTable = ({ className }: Props) => {
   })
 
   return (
-    <Box className={className}>
+    <div>
       <TableComponent
         allowSort={true}
         rows={rows}
@@ -206,31 +213,34 @@ const ProjectTable = ({ className }: Props) => {
         handleRowsPerPageChange={handleRowsPerPageChange}
       />
       <ConfirmModal
-        open={popupReuploadConfirmOpen}
-        description={`${t('admin:components.project.confirmProjectRebuild')} '${project?.name}'?`}
+        popConfirmOpen={popupReuploadConfirmOpen}
+        handleCloseModal={handleCloseReuploadModal}
+        submit={tryReuploadProjects}
+        name={project?.name}
+        label={t('admin:components.project.project')}
+        type="rebuild"
         processing={processing}
-        onClose={handleCloseReuploadModal}
-        onSubmit={tryReuploadProjects}
       />
       <ConfirmModal
-        open={popupInvalidateConfirmOpen}
-        description={`${t('admin:components.project.confirmProjectInvalidate')} '${project?.name}'?`}
+        popConfirmOpen={popupInvalidateConfirmOpen}
+        handleCloseModal={handleCloseInvalidateModal}
+        submit={handleInvalidateCache}
+        name={project?.name}
+        label={t('admin:components.project.storageProvidersCacheOf')}
+        type="invalidates"
         processing={processing}
-        onClose={handleCloseInvalidateModal}
-        onSubmit={handleInvalidateCache}
       />
       <ConfirmModal
-        open={popupRemoveConfirmOpen}
-        description={`${t('admin:components.project.confirmProjectDelete')} '${project?.name}'?`}
-        onClose={handleCloseRemoveModal}
-        onSubmit={onRemoveProject}
+        popConfirmOpen={popupRemoveConfirmOpen}
+        handleCloseModal={handleCloseRemoveModal}
+        submit={onRemoveProject}
+        name={project?.name}
+        label={t('admin:components.project.project')}
       />
 
       {showProjectFiles && projectName && (
-        <ViewProjectFiles name={projectName} open onClose={() => setShowProjectFiles(false)} />
+        <ViewProjectFiles name={projectName} open={showProjectFiles} setShowProjectFiles={setShowProjectFiles} />
       )}
-    </Box>
+    </div>
   )
 }
-
-export default ProjectTable

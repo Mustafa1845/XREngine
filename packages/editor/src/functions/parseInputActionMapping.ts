@@ -249,6 +249,5 @@ export const removeInputActionMapping = (inputSet: ActionSets): void => {
 
 export const getInput = (key: ActionKey) => {
   const inputComponent = getComponent(SceneState.editorEntity, InputComponent)
-  if (!inputComponent?.actionState) return
   return inputComponent.actionState[key] ?? 0
 }

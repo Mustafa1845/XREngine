@@ -2,11 +2,10 @@ import { Params } from '@feathersjs/feathers'
 
 import { SceneData } from '@xrengine/common/src/interfaces/SceneInterface'
 
-import { Application, ServerMode } from '../../../declarations'
+import { Application } from '../../../declarations'
 import logger from '../../logger'
 import { getStorageProvider } from '../../media/storageprovider/storageprovider'
-import { getActiveInstancesForScene } from '../../networking/instance/instance.service'
-import { getAllPortals, getEnvMapBake, getPortal } from './scene-helper'
+import { getAllPortals, getCubemapBake, getPortal } from './scene-helper'
 import { getSceneData, Scene } from './scene.class'
 import projectDocs from './scene.docs'
 import hooks from './scene.hooks'
@@ -107,7 +106,7 @@ export default (app: Application) => {
     get: getPortal(app),
     find: getAllPortals(app)
   })
-  app.use('/cubemap/:entityId', getEnvMapBake(app))
+  app.use('/cubemap/:entityId', getCubemapBake(app))
 
   /**
    * Get our initialized service so that we can register hooks
@@ -117,26 +116,4 @@ export default (app: Application) => {
   const service = app.service('scene')
 
   service.hooks(hooks)
-
-  if (app.serverMode === ServerMode.API)
-    service.publish('updated', async (data, context) => {
-      const instances = await getActiveInstancesForScene(app)({ query: { sceneId: data.sceneId } })
-      const users = (
-        await Promise.all(
-          instances.map((instance) =>
-            app.service('user').Model.findAll({
-              where: {
-                instanceId: instance.id
-              }
-            })
-          )
-        )
-      ).flat()
-      const targetIds = users.map((user) => user.id)
-      return Promise.all(
-        targetIds.map((userId: string) => {
-          return app.channel(`userIds/${userId}`).send({})
-        })
-      )
-    })
 }

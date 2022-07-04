@@ -1,6 +1,6 @@
 import { Object3D } from 'three'
 
-import { API } from '@xrengine/client-core/src/API'
+import { client } from '@xrengine/client-core/src/feathers'
 import { uploadToFeathersService } from '@xrengine/client-core/src/util/upload'
 import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
 import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
@@ -133,7 +133,7 @@ export const getEntries = async (directoryReader: FileSystemDirectoryReader): Pr
 export const extractZip = async (path: string): Promise<any> => {
   try {
     const parms = { path: path }
-    await API.instance.client.service('asset-library').create(parms)
+    await client.service('asset-library').create(parms)
   } catch (err) {
     throw err
   }

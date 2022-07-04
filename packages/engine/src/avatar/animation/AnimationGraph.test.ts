@@ -18,8 +18,7 @@ describe('AnimationGraph changeState', () => {
     const graph: AnimationGraph = {
       states: { TestState: testState },
       transitionRules: {},
-      currentState: null!,
-      stateChanged: null!
+      currentState: null!
     }
 
     const animationStateStub = {} as any
@@ -42,8 +41,7 @@ describe('AnimationGraph changeState', () => {
     const graph: AnimationGraph = {
       states: {},
       transitionRules: {},
-      currentState: null!,
-      stateChanged: null!
+      currentState: null!
     }
 
     const animationStateStub = {} as any
@@ -69,8 +67,7 @@ describe('AnimationGraph updateAnimationGraph', () => {
     const graph: AnimationGraph = {
       states: {},
       transitionRules: {},
-      currentState: null!,
-      stateChanged: null!
+      currentState: null!
     }
 
     const animationStateStub = {} as any
@@ -88,8 +85,7 @@ describe('AnimationGraph updateAnimationGraph', () => {
     const graph: AnimationGraph = {
       states: {},
       transitionRules: {},
-      currentState: null!,
-      stateChanged: null!
+      currentState: null!
     }
 
     const animationStateStub = {} as any
@@ -136,8 +132,7 @@ describe('AnimationGraph updateAnimationGraph', () => {
     const graph: AnimationGraph = {
       states: {},
       transitionRules: {},
-      currentState: state1,
-      stateChanged: null!
+      currentState: state1
     }
 
     graph.states[state1.name] = state1

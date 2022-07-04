@@ -70,3 +70,13 @@ export interface EntityData {
   index: string
   components: any
 }
+
+export interface SceneProps {
+  search: string
+}
+
+export interface ViewSceneProps {
+  adminScene: SceneMetadata
+  viewModal: boolean
+  closeViewModal: (open: boolean) => void
+}

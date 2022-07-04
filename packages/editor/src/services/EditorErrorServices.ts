@@ -1,39 +1,39 @@
-import { useState } from '@speigg/hookstate'
+import { createState, useState } from '@speigg/hookstate'
 
-import { matches, Validator } from '@xrengine/engine/src/common/functions/MatchesUtils'
-import { addActionReceptor, defineAction, defineState, getState, registerState } from '@xrengine/hyperflux'
+import { store } from '@xrengine/client-core/src/store'
 
 type EditorErrorServiceStateType = {
   error: any
 }
 
-const EditorErrorState = defineState({
-  name: 'EditorErrorState',
-  initial: () =>
-    ({
-      error: null
-    } as EditorErrorServiceStateType)
+const state = createState<EditorErrorServiceStateType>({
+  error: null
 })
 
-export const EditorErrorServiceReceptor = (action): any => {
-  getState(EditorErrorState).batch((s) => {
-    matches(action).when(EditorErrorAction.throwError.matches, (action) => {
-      return s.merge({ error: action.error })
-    })
-  })
-}
+store.receptors.push((action: EditorErrorActionType): any => {
+  state.batch((s) => {
+    switch (action.type) {
+      case 'ERROR_THROWN':
+        return s.merge({ error: action.error })
+    }
+  }, action.type)
+})
 
-export const accessEditorErrorState = () => getState(EditorErrorState)
+export const accessEditorErrorState = () => state
 
-export const useEditorErrorState = () => useState(accessEditorErrorState())
+export const useEditorErrorState = () => useState(state) as any as typeof state
 
 //Service
 export const EditorErrorService = {}
 
 //Action
-export class EditorErrorAction {
-  static throwError = defineAction({
-    type: 'editorError.ERROR_THROWN' as const,
-    error: matches.object as Validator<unknown, Error>
-  })
+export const EditorErrorAction = {
+  throwError: (error: any) => {
+    return {
+      type: 'ERROR_THROWN' as const,
+      error
+    }
+  }
 }
+
+export type EditorErrorActionType = ReturnType<typeof EditorErrorAction[keyof typeof EditorErrorAction]>

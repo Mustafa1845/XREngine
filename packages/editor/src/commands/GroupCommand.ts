@@ -1,3 +1,4 @@
+import { store } from '@xrengine/client-core/src/store'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { Entity } from '@xrengine/engine/src/ecs/classes/Entity'
 import { EntityTreeNode } from '@xrengine/engine/src/ecs/classes/EntityTree'
@@ -7,7 +8,6 @@ import {
   getEntityNodeArrayFromEntities
 } from '@xrengine/engine/src/ecs/functions/EntityTreeFunctions'
 import { ScenePrefabs } from '@xrengine/engine/src/scene/functions/registerPrefabs'
-import { dispatchAction } from '@xrengine/hyperflux'
 
 import { executeCommand } from '../classes/History'
 import EditorCommands, { CommandFuncType, CommandParams, ParentCommands } from '../constants/EditorCommands'
@@ -131,7 +131,7 @@ function emitEventBefore(command: GroupCommandParams) {
   if (command.preventEvents) return
 
   cancelGrabOrPlacement()
-  dispatchAction(SelectionAction.changedBeforeSelection())
+  store.dispatch(SelectionAction.changedBeforeSelection())
 }
 
 function emitEventAfter(command: GroupCommandParams) {
@@ -139,8 +139,8 @@ function emitEventAfter(command: GroupCommandParams) {
 
   if (command.updateSelection) updateOutlinePassSelection()
 
-  dispatchAction(EditorAction.sceneModified({ modified: true }))
-  dispatchAction(SelectionAction.changedSceneGraph())
+  store.dispatch(EditorAction.sceneModified(true))
+  store.dispatch(SelectionAction.changedSceneGraph())
 }
 
 function toString(command: GroupCommandParams) {

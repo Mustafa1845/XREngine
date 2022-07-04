@@ -17,7 +17,8 @@ interface Props {
   token: string
 }
 
-const AuthMagicLink = ({ token, type }: Props): JSX.Element => {
+const AuthMagicLink = (props: Props): JSX.Element => {
+  const { token, type } = props
   const { t } = useTranslation()
   const user = useAuthState().user
   useEffect(() => {
@@ -55,7 +56,7 @@ const AuthMagicLinkWrapper = (props: any): JSX.Element => {
   if (type === 'verify') {
     return <VerifyEmail {...props} type={type} token={token} />
   } else if (type === 'reset') {
-    return <ResetPassword resetPassword={handleResetPassword} token={token} />
+    return <ResetPassword resetPassword={handleResetPassword} type={type} token={token} />
   }
   return <AuthMagicLink {...props} token={token} type={type} />
 }

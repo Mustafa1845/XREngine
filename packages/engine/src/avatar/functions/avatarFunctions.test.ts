@@ -80,8 +80,7 @@ describe('avatarFunctions Unit', async () => {
         animationGraph: {
           states: {},
           transitionRules: {},
-          currentState: null!,
-          stateChanged: null!
+          currentState: null!
         },
         rig: {} as BoneStructure,
         rootYRatio: 1

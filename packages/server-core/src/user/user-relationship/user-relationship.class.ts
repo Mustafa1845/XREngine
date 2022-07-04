@@ -1,4 +1,4 @@
-import { Id, Params } from '@feathersjs/feathers'
+import { NullableId, Params } from '@feathersjs/feathers'
 import { SequelizeServiceOptions, Service } from 'feathers-sequelize'
 import { Sequelize, Transaction } from 'sequelize'
 
@@ -23,7 +23,7 @@ export class UserRelationship<T = UserRelationshipDataType> extends Service<T> {
     this.app = app
   }
 
-  async find(params?: Params): Promise<any> {
+  async findAll(params?: Params): Promise<any> {
     if (!params) params = {}
     const UserRelationshipModel = this.getModel(params)
     const UserRelationshipTypeService = this.app.service('user-relationship-type')
@@ -107,51 +107,36 @@ export class UserRelationship<T = UserRelationshipDataType> extends Service<T> {
     return result
   }
 
-  async patch(id: Id, data: any, params?: Params): Promise<T> {
+  async patch(id: NullableId, data: any, params?: Params): Promise<T> {
     if (!params) params = {}
     const { userRelationshipType } = data
     const UserRelationshipModel = this.getModel(params)
-
-    let whereParams
-
-    try {
-      await this.app.service('user').get(id)
-      //The ID resolves to a userId, in which case patch the relation joining that user to the requesting one
-      whereParams = {
-        userId: params.user.id,
-        relatedUserId: id
-      }
-    } catch (err) {
-      //The ID does not resolve to a user, in which case it's the ID of the user-relationship object, so patch it
-      whereParams = {
-        id: id
-      }
-    }
 
     await UserRelationshipModel.update(
       {
         userRelationshipType: userRelationshipType
       },
       {
-        where: whereParams
+        where: {
+          id: id
+        }
       }
     )
 
     return UserRelationshipModel.findOne({
-      where: whereParams
+      where: {
+        id: id
+      }
     })
   }
 
-  async remove(id: Id, params?: Params): Promise<T> {
+  async remove(id: NullableId, params?: Params): Promise<T> {
     if (!params) params = {}
     const loggedInUserEntity: string = config.authentication.entity
 
     const authUser = params[loggedInUserEntity]
     const userId = authUser.userId
     const UserRelationshipModel = this.getModel(params)
-
-    //If the ID provided is not a user ID, as it's expected to be, it'll throw a 404
-    await this.app.service('user').get(id)
 
     const relationship = await UserRelationshipModel.findOne({
       where: {

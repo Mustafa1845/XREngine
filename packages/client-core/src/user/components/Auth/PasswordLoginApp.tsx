@@ -14,7 +14,10 @@ import styles from './index.module.scss'
 
 const initialState = { email: '', password: '' }
 
-export const PasswordLoginApp = (): JSX.Element => {
+interface Props {}
+
+export const PasswordLoginApp = (props: Props): JSX.Element => {
+  const {} = props
   const { t } = useTranslation()
 
   const [state, setState] = useState(initialState)
@@ -91,4 +94,6 @@ export const PasswordLoginApp = (): JSX.Element => {
   )
 }
 
-export default PasswordLoginApp
+const PasswordLoginWrapper = (props: Props): JSX.Element => <PasswordLoginApp {...props} />
+
+export default PasswordLoginWrapper

@@ -9,13 +9,13 @@ import verifyScope from '../../hooks/verify-scope'
 
 export default {
   before: {
-    all: [authenticate(), iff(isProvider('external'), verifyScope('editor', 'write') as any)],
+    all: [],
     find: [disallow('external')],
     get: [],
-    create: [],
-    update: [],
-    patch: [],
-    remove: []
+    create: [authenticate(), iff(isProvider('external'), verifyScope('editor', 'write') as any)],
+    update: [authenticate(), iff(isProvider('external'), verifyScope('editor', 'write') as any)],
+    patch: [authenticate(), iff(isProvider('external'), verifyScope('editor', 'write') as any)],
+    remove: [authenticate(), iff(isProvider('external'), verifyScope('editor', 'write') as any)]
   },
 
   after: {
