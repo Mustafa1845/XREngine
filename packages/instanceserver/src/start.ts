@@ -1,5 +1,4 @@
 import AgonesSDK from '@google-cloud/agones-sdk'
-import messages from '@google-cloud/agones-sdk/lib/sdk_pb'
 import { exec } from 'child_process'
 import fs from 'fs'
 import https from 'https'
@@ -14,7 +13,7 @@ import { Socket } from 'socket.io'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { EngineActions, getEngineState } from '@xrengine/engine/src/ecs/classes/EngineState'
 import { matchActionOnce } from '@xrengine/engine/src/networking/functions/matchActionOnce'
-import { Application } from '@xrengine/server-core/declarations'
+import { Application, ServerMode } from '@xrengine/server-core/declarations'
 import config from '@xrengine/server-core/src/appconfig'
 import {
   configureK8s,
@@ -60,9 +59,9 @@ export const instanceServerPipe = pipe(
 ) as (app: Application) => Application
 
 export const start = async (): Promise<Application> => {
-  const app = createFeathersExpressApp(instanceServerPipe)
+  const app = createFeathersExpressApp(ServerMode.Instance, instanceServerPipe)
 
-  const agonesSDK:AgonesSDK = new AgonesSDK()
+  const agonesSDK = new AgonesSDK()
 
   agonesSDK.connect()
   agonesSDK.ready().catch((err) => {
@@ -71,24 +70,7 @@ export const start = async (): Promise<Application> => {
       '\x1b[33mError: Agones is not running!. If you are in local development, please run xrengine/scripts/sh start-agones.sh and restart server\x1b[0m'
     )
   })
-
   app.agonesSDK = agonesSDK
-  agonesSDK.health = function() {
-    if (agonesSDK.healthStream === undefined) {
-      agonesSDK.healthStream = agonesSDK.client.health(() => {
-        // Ignore error as this can't be caught
-      });
-    }
-    const request = new messages.Empty();
-    agonesSDK.healthStream.write(request, null, (err) => {
-      if (err) {
-        console.log('\x1b[33mError: Agones health check is failed!\x1b[0m')
-        logger.error(err)
-        throw new Error("Agones health check is failed!")
-      }
-    });
-  }
-
   setInterval(() => agonesSDK.health(), 1000)
 
   app.configure(channels)
