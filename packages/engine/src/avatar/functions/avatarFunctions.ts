@@ -40,12 +40,13 @@ import { Updatable } from '../../scene/interfaces/Updatable'
 import { createAvatarAnimationGraph } from '../animation/AvatarAnimationGraph'
 import { applySkeletonPose, isSkeletonInTPose, makeTPose } from '../animation/avatarPose'
 import { retargetSkeleton, syncModelSkeletons } from '../animation/retargetSkeleton'
-import avatarBoneMatching, { createSkeletonFromBone, findSkinnedMeshes } from '../AvatarBoneMatching'
+import avatarBoneMatching, { BoneNames, createSkeletonFromBone, findSkinnedMeshes } from '../AvatarBoneMatching'
 import { AnimationComponent } from '../components/AnimationComponent'
 import { AvatarAnimationComponent } from '../components/AvatarAnimationComponent'
 import { AvatarComponent } from '../components/AvatarComponent'
 import { AvatarControllerComponent } from '../components/AvatarControllerComponent'
 import { AvatarEffectComponent, MaterialMap } from '../components/AvatarEffectComponent'
+import { AvatarHeadDecapComponent } from '../components/AvatarHeadDecapComponent'
 import { AvatarPendingComponent } from '../components/AvatarPendingComponent'
 import { defaultBonesData } from '../DefaultSkeletonBones'
 import { DissolveEffect } from '../DissolveEffect'
@@ -101,6 +102,10 @@ export const setupAvatarForUser = (entity: Entity, model: Object3D) => {
 
   setupAvatarModel(entity)(model)
   setupAvatarHeight(entity, model)
+
+  if (entity === Engine.instance.currentWorld.localClientEntity) {
+    addComponent(entity, AvatarHeadDecapComponent, { opacity: 1, ready: false })
+  }
 
   const avatarMaterials = setupAvatarMaterials(entity, model)
 
@@ -204,17 +209,10 @@ export const setupAvatarMaterials = (entity, root) => {
   const materialList: Array<MaterialMap> = []
   setObjectLayers(root, ObjectLayers.Avatar)
 
-  const animationComponent = getComponent(entity, AvatarAnimationComponent)
-  const headBone = animationComponent.rig.Head
-
   root.traverse((object) => {
     if (object.isBone) object.visible = false
     if (object.material && object.material.clone) {
       const material = object.material.clone()
-      // If local player's avatar
-      if (object.isSkinnedMesh && headBone && entity === Engine.instance.currentWorld.localClientEntity) {
-        setupHeadDecap(object, headBone, material)
-      }
       materialList.push({
         id: object.uuid,
         material: material
@@ -323,13 +321,25 @@ export function makeSkinnedMeshFromBoneData(bonesData): SkinnedMesh {
   return skinnedMesh
 }
 
+export function setupEntityHeadDecap(entity: Entity) {
+  const animationComponent = getComponent(entity, AvatarAnimationComponent)
+  const headBone = animationComponent.rig.Head
+  const model = getComponent(entity, Object3DComponent).value
+
+  model.traverse((child: any) => {
+    if (!child.isSkinnedMesh || !child.material) return
+    const material = child.material
+    setupHeadDecap(child, headBone, material)
+  })
+}
+
 /**
  * Adds required parameters to mesh's material
  * to enable avatar's head decapitation (opacity fade)
  * @param model
  * @param material
  */
-function setupHeadDecap(object: any, headBone: any | undefined, material: Material) {
+export function setupHeadDecap(object: any, headBone: any | undefined, material: Material) {
   // Create a copy of the mesh to hide 'internal' polygons when opacity is below 1
   if (material.opacity > 0) {
     const mesh = object.getObjectByProperty('type', 'SkinnedMesh') as SkinnedMesh
@@ -454,7 +464,7 @@ export const setAvatarHeadOpacity = (entity: Entity, opacity: number): void => {
   })
 }
 
-export const getAvatarBoneWorldPosition = (entity: Entity, boneName: string, position: Vector3): boolean => {
+export const getAvatarBoneWorldPosition = (entity: Entity, boneName: BoneNames, position: Vector3): boolean => {
   const animationComponent = getComponent(entity, AvatarAnimationComponent)
   if (!animationComponent) return false
   const bone = animationComponent.rig[boneName]
