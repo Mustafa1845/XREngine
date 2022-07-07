@@ -6,7 +6,7 @@ domain: xrengine.dev
 
 builder:
   enabled: true
-  name: xrengine-builder-test
+  name: xrengine-builder
 
   replicaCount: 1
   image:

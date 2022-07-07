@@ -21,7 +21,7 @@ export const retriggerBuilderService = async (app: Application) => {
     try {
       logger.info('Attempting to reload k8s clients!')
       const restartClientsResponse = await app.k8AppsClient.patchNamespacedDeployment(
-        `${config.server.releaseName}-builder-xrengine-builder-test`,
+        `${config.server.releaseName}-builder-xrengine-builder`,
         'default',
         {
           spec: {
@@ -76,4 +76,17 @@ export const getProjectConfig = async (projectName: string): Promise<ProjectConf
     )
     return null!
   }
+}
+
+export const getProjectEnv = async (app: Application, projectName: string) => {
+  const projectSetting = await app.service('project-setting').find({
+    query: {
+      $limit: 1,
+      name: projectName,
+      $select: ['settings']
+    }
+  })
+  const settings = {} as { [key: string]: string }
+  Object.values(projectSetting).map(({ key, value }) => (settings[key] = value))
+  return settings
 }
