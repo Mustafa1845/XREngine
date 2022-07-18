@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import DialogContent from '@mui/material/DialogContent'
 
@@ -7,13 +8,14 @@ import InputText from '../../common/InputText'
 
 interface Props {
   open: boolean
-  handleClose: () => void
+  onClose: () => void
 }
 
-const createUser = (props: Props) => {
-  const { open, handleClose } = props
+const CreateUserRole = ({ open, onClose }: Props) => {
   const [role, setRole] = useState('')
-  const createUserRole = async () => {
+  const { t } = useTranslation()
+
+  const handleSubmit = () => {
     setRole('')
   }
 
@@ -22,12 +24,18 @@ const createUser = (props: Props) => {
   }
 
   return (
-    <CreateModal open={open} handleClose={handleClose} text="user role" action="Create" submit={createUserRole}>
+    <CreateModal
+      open={open}
+      text={t('admin:components.user.userRole')}
+      action="Create"
+      onSubmit={handleSubmit}
+      onClose={onClose}
+    >
       <DialogContent>
-        <InputText value={role} formErrors={''} handleInputChange={handleChange} name="role" />
+        <InputText name="role" label={t('admin:components.user.role')} value={role} onChange={handleChange} />
       </DialogContent>
     </CreateModal>
   )
 }
 
-export default createUser
+export default CreateUserRole

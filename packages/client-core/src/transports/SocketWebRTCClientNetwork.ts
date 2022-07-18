@@ -1,5 +1,5 @@
 import * as mediasoupClient from 'mediasoup-client'
-import { DataProducer, Transport as MediaSoupTransport } from 'mediasoup-client/lib/types'
+import { Consumer, DataProducer, Transport as MediaSoupTransport, Producer } from 'mediasoup-client/lib/types'
 import { io as ioclient, Socket } from 'socket.io-client'
 
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
@@ -8,7 +8,7 @@ import { MessageTypes } from '@xrengine/engine/src/networking/enums/MessageTypes
 import { Action } from '@xrengine/hyperflux/functions/ActionFunctions'
 
 import { accessAuthState } from '../user/services/AuthService'
-import { gameserverHost } from '../util/config'
+import { instanceserverHost } from '../util/config'
 import { onConnectToInstance } from './SocketWebRTCClientFunctions'
 
 // import { encode, decode } from 'msgpackr'
@@ -28,8 +28,6 @@ export class SocketWebRTCClientNetwork extends Network {
   }
 
   mediasoupDevice = new mediasoupClient.Device(Engine.instance.isBot ? { handlerName: 'Chrome74' } : undefined)
-  leaving = false
-  left = false
   reconnecting = false
   recvTransport: MediaSoupTransport
   sendTransport: MediaSoupTransport
@@ -38,6 +36,9 @@ export class SocketWebRTCClientNetwork extends Network {
 
   dataProducer: DataProducer
   heartbeat: NodeJS.Timer // is there an equivalent browser type for this?
+
+  producers = [] as Producer[]
+  consumers = [] as Consumer[]
 
   sendActions(actions: Action[]) {
     if (!actions.length) return
@@ -64,7 +65,6 @@ export class SocketWebRTCClientNetwork extends Network {
   }
 
   public async initialize(args: {
-    sceneId: string
     ipAddress: string
     port: string
     locationId?: string
@@ -73,13 +73,12 @@ export class SocketWebRTCClientNetwork extends Network {
     this.reconnecting = false
     if (this.socket) return console.error('[SocketWebRTCClientNetwork]: already initialized')
     console.log('[SocketWebRTCClientNetwork]: Initialising transport with args', args)
-    const { sceneId, ipAddress, port, locationId, channelId } = args
+    const { ipAddress, port, locationId, channelId } = args
 
     const authState = accessAuthState()
     const token = authState.authUser.accessToken.value
 
     const query = {
-      sceneId,
       locationId,
       channelId,
       token
@@ -97,7 +96,7 @@ export class SocketWebRTCClientNetwork extends Network {
         query
       })
     } else {
-      this.socket = ioclient(gameserverHost, {
+      this.socket = ioclient(instanceserverHost, {
         path: `/socket.io/${ipAddress as string}/${port.toString()}`,
         query
       })
@@ -114,7 +113,7 @@ export class SocketWebRTCClientNetwork extends Network {
       if ((this.socket as any)._connected) return
       ;(this.socket as any)._connected = true
 
-      console.log('CONNECT to port', port, sceneId, locationId)
+      console.log('CONNECT to port', port, locationId)
       onConnectToInstance(this)
 
       // Send heartbeat every second

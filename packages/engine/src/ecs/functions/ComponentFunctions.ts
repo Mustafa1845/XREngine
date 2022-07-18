@@ -5,6 +5,9 @@ import { ArrayByType, ISchema, Type } from 'bitecs'
 import { Engine } from '../classes/Engine'
 import { Entity } from '../classes/Entity'
 
+const INITIAL_COMPONENT_SIZE = 1000 // TODO set to 0 after next bitECS update
+bitECS.setDefaultSize(1000)
+
 /**
  * @todo move this to engine scope
  */
@@ -36,7 +39,7 @@ export class MappedComponentSetupAPI<_Schema extends bitECS.ISchema = any, _Type
   }
 
   build() {
-    const component = bitECS.defineComponent(this.schema)
+    const component = bitECS.defineComponent(this.schema, INITIAL_COMPONENT_SIZE)
     const componentMap = new Map<number, _Type & SoAProxy<_Schema>>()
     const componentMapOldValues = new Map<number, _Type & SoAProxy<_Schema>>()
     // const componentMap = []
@@ -109,7 +112,7 @@ export class MappedComponentSetupAPI<_Schema extends bitECS.ISchema = any, _Type
 
 // TODO: benchmark map vs array for componentMap
 export const createMappedComponent = <T, S extends bitECS.ISchema = {}>(name: string, schema?: S) => {
-  const component = bitECS.defineComponent(schema)
+  const component = bitECS.defineComponent(schema, INITIAL_COMPONENT_SIZE)
   const componentMap = new Map<number, T & SoAProxy<S>>()
   const componentMapOldValues = new Map<number, T & SoAProxy<S>>()
   // const componentMap = []
@@ -222,6 +225,9 @@ export const getComponent = <T, S extends bitECS.ISchema>(
   if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[getComponent]: entity is undefined')
   }
+  if (typeof world === 'undefined' || world === null) {
+    throw new Error('[getComponent]: world is undefined')
+  }
   if (getRemoved) return (component as any)._getPrevious(entity)
   if (bitECS.hasComponent(world, component, entity)) return component.get(entity)
   return null!
@@ -236,7 +242,10 @@ export const addComponent = <T, S extends bitECS.ISchema>(
   if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[addComponent]: entity is undefined')
   }
-  if (hasComponent(entity, component, world)) throw new Error('component already exists' + entity + component._name)
+  if (typeof world === 'undefined' || world === null) {
+    throw new Error('[addComponent]: world is undefined')
+  }
+  if (hasComponent(entity, component, world)) throw new Error(`${component._name} already exists on entity ${entity}`)
   bitECS.addComponent(world, component, entity, false) // don't clear data on-add
   if ((component as any)._schema) {
     for (const [key] of Object.entries((component as any)._schema as any)) {
@@ -258,6 +267,18 @@ export const hasComponent = <T, S extends bitECS.ISchema>(
   return bitECS.hasComponent(world, component, entity)
 }
 
+export const getOrAddComponent = <T, S extends bitECS.ISchema>(
+  entity: Entity,
+  component: MappedComponent<T, S>,
+  args: T,
+  getRemoved = false,
+  world = Engine.instance.currentWorld
+) => {
+  return hasComponent(entity, component, world)
+    ? getComponent(entity, component, getRemoved, world)
+    : addComponent(entity, component, args, world)
+}
+
 export const removeComponent = <T, S extends bitECS.ISchema>(
   entity: Entity,
   component: MappedComponent<T, S>,
@@ -265,6 +286,9 @@ export const removeComponent = <T, S extends bitECS.ISchema>(
 ) => {
   if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[removeComponent]: entity is undefined')
+  }
+  if (typeof world === 'undefined' || world === null) {
+    throw new Error('[removeComponent]: world is undefined')
   }
   ;(component as any)._setPrevious(entity, getComponent(entity, component, false, world))
   bitECS.removeComponent(world, component, entity, true) // clear data on-remove

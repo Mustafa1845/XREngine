@@ -10,28 +10,20 @@ import { Autorenew, Face, Save } from '@mui/icons-material'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import Grid from '@mui/material/Grid'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 
+import { NotificationService } from '../../../common/services/NotificationService'
 import { useAuthState } from '../../../user/services/AuthService'
 import AddCommand from '../../common/AddCommand'
-import AlertMessage from '../../common/AlertMessage'
-import { useFetchAdminInstance } from '../../common/hooks/Instance.hooks'
-import { useFetchAdminLocations } from '../../common/hooks/Location.hooks'
-import InputSelect from '../../common/InputSelect'
+import InputSelect, { InputMenuItem } from '../../common/InputSelect'
 import InputText from '../../common/InputText'
 import { validateForm } from '../../common/validation/formValidation'
-import { BotService } from '../../services/BotsService'
-import { InstanceService, useInstanceState } from '../../services/InstanceService'
-import { LocationService, useLocationState } from '../../services/LocationService'
+import { AdminBotService } from '../../services/BotsService'
+import { AdminInstanceService, useAdminInstanceState } from '../../services/InstanceService'
+import { AdminLocationService, useAdminLocationState } from '../../services/LocationService'
 import styles from '../../styles/admin.module.scss'
-
-interface Menu {
-  value: string
-  label: string
-}
 
 const CreateBot = () => {
   const [command, setCommand] = useState<BotCommands>({
@@ -40,8 +32,6 @@ const CreateBot = () => {
     description: ''
   })
   const [commandData, setCommandData] = useState<BotCommands[]>([])
-  const [open, setOpen] = useState(false)
-  const [error, setError] = useState('')
 
   const [formErrors, setFormErrors] = useState({
     name: '',
@@ -55,20 +45,28 @@ const CreateBot = () => {
     instance: '',
     location: ''
   })
-  const adminInstanceState = useInstanceState()
+  const adminInstanceState = useAdminInstanceState()
   const authState = useAuthState()
   const user = authState.user
   const adminInstances = adminInstanceState
   const instanceData = adminInstances.instances
-  const adminLocationState = useLocationState()
+  const adminLocationState = useAdminLocationState()
   const adminLocation = adminLocationState
   const locationData = adminLocation.locations
   const { t } = useTranslation()
 
-  //Call custom hooks
-  useFetchAdminInstance(user, adminInstanceState, InstanceService)
-  useFetchAdminLocations(user, adminLocationState, LocationService)
-  AddCommand
+  useEffect(() => {
+    if (user?.id.value && adminInstanceState.updateNeeded.value) {
+      AdminInstanceService.fetchAdminInstances()
+    }
+  }, [user?.id?.value, adminInstanceState.updateNeeded.value])
+
+  useEffect(() => {
+    if (user?.id.value && adminLocationState.updateNeeded.value) {
+      AdminLocationService.fetchAdminLocations()
+    }
+  }, [user?.id?.value, adminLocationState.updateNeeded.value])
+
   const handleChangeCommand = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const { name, value } = e.target
     setCommand({ ...command, id: uuidv4(), [name]: value })
@@ -78,23 +76,14 @@ const CreateBot = () => {
     if (command.name) {
       const found = commandData.find((el) => el.name === command.name)
       if (found) {
-        setError(t('admin:components.bot.uniqueCommand'))
-        setOpen(true)
+        NotificationService.dispatchNotify(t('admin:components.bot.uniqueCommand'), { variant: 'error' })
       } else {
         setCommandData([...commandData, command])
         setCommand({ id: '', name: '', description: '' })
       }
     } else {
-      setError(t('admin:components.bot.commandRequired'))
-      setOpen(true)
+      NotificationService.dispatchNotify(t('admin:components.bot.commandRequired'), { variant: 'error' })
     }
-  }
-
-  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
-    if (reason === 'clickaway') {
-      return
-    }
-    setOpen(false)
   }
 
   const data: Instance[] = instanceData.value.map((element) => {
@@ -120,35 +109,32 @@ const CreateBot = () => {
       description: state.description,
       locationId: state.location
     }
-    let temp = formErrors
-    if (!state.name) {
-      temp.name = t('admin:components.bot.nameCantEmpty')
-    }
-    if (!state.description) {
-      temp.description = t('admin:components.bot.descriptionCantEmpty')
-    }
-    if (!state.location) {
-      temp.location = t('admin:components.bot.locationCantEmpty')
+
+    let tempErrors = {
+      ...formErrors,
+      name: state.name ? '' : t('admin:components.bot.nameCantEmpty'),
+      description: state.description ? '' : t('admin:components.bot.descriptionCantEmpty'),
+      location: state.location ? '' : t('admin:components.bot.locationCantEmpty')
     }
 
-    setFormErrors(temp)
-    if (validateForm(state, formErrors)) {
-      BotService.createBotAsAdmin(data)
+    setFormErrors(tempErrors)
+
+    if (validateForm(state, tempErrors)) {
+      AdminBotService.createBotAsAdmin(data)
       setState({ name: '', description: '', instance: '', location: '' })
       setCommandData([])
       setCurrentIntance([])
     } else {
-      setError(t('admin:components.bot.fillRequiredField'))
-      setOpen(true)
+      NotificationService.dispatchNotify(t('admin:components.bot.fillRequiredField'), { variant: 'error' })
     }
   }
 
   const fetchAdminInstances = () => {
-    InstanceService.fetchAdminInstances()
+    AdminInstanceService.fetchAdminInstances()
   }
 
   const fetchAdminLocations = () => {
-    LocationService.fetchAdminLocations()
+    AdminLocationService.fetchAdminLocations()
   }
 
   const removeCommand = (id: string) => {
@@ -157,22 +143,22 @@ const CreateBot = () => {
   }
 
   const handleInputChange = (e) => {
-    const names = e.target.name
-    const value = e.target.value
-    let temp = formErrors
-    temp[names] = value.length < 2 ? `${_.upperFirst(names)} is required` : ''
+    const { name, value } = e.target
+
+    let temp = { ...formErrors }
+    temp[name] = value.length < 2 ? `${_.upperFirst(name)} is required` : ''
     setFormErrors(temp)
-    setState({ ...state, [names]: value })
+    setState({ ...state, [name]: value })
   }
 
-  const locationMenu: Menu[] = locationData.value.map((el) => {
+  const locationMenu: InputMenuItem[] = locationData.value.map((el) => {
     return {
       value: el.id,
       label: el.name
     }
   })
 
-  const instanceMenu: Menu[] = currentInstance.map((el) => {
+  const instanceMenu: InputMenuItem[] = currentInstance.map((el) => {
     return {
       value: el.id,
       label: el.ipAddress
@@ -195,60 +181,50 @@ const CreateBot = () => {
         <Typography className={styles.secondaryHeading} component="h1">
           {t('admin:components.bot.addMoreBots')}
         </Typography>
-        <form style={{ marginTop: '40px' }}>
+        <form style={{ marginTop: '20px' }}>
           <InputText
             name="name"
-            handleInputChange={handleInputChange}
+            label={t('admin:components.bot.name')}
+            onChange={handleInputChange}
             value={state.name}
-            formErrors={formErrors.name}
+            error={formErrors.name}
           />
 
           <InputText
             name="description"
-            handleInputChange={handleInputChange}
+            label={t('admin:components.bot.description')}
             value={state.description}
-            formErrors={formErrors.description}
+            error={formErrors.description}
+            onChange={handleInputChange}
           />
 
-          <label> {t('admin:components.bot.location')}</label>
-          <Grid container spacing={1}>
-            <Grid item xs={10}>
-              <InputSelect
-                formErrors={formErrors.location}
-                value={state.location}
-                handleInputChange={handleInputChange}
-                name="location"
-                menu={locationMenu}
-              />
-            </Grid>
-            <Grid item xs={2} style={{ display: 'flex' }}>
-              <div style={{ marginLeft: 'auto' }}>
-                <IconButton onClick={fetchAdminLocations} size="large">
-                  <Autorenew style={{ color: 'var(--iconButtonColor)' }} />
-                </IconButton>
-              </div>
-            </Grid>
-          </Grid>
+          <InputSelect
+            name="location"
+            label={t('admin:components.bot.location')}
+            value={state.location}
+            error={formErrors.location}
+            menu={locationMenu}
+            onChange={handleInputChange}
+            endControl={
+              <IconButton onClick={fetchAdminLocations}>
+                <Autorenew style={{ color: 'var(--iconButtonColor)' }} />
+              </IconButton>
+            }
+          />
 
-          <label> {t('admin:components.bot.instance')}</label>
-          <Grid container spacing={1}>
-            <Grid item xs={10}>
-              <InputSelect
-                formErrors={formErrors.location}
-                value={state.instance}
-                handleInputChange={handleInputChange}
-                name="instance"
-                menu={instanceMenu}
-              />
-            </Grid>
-            <Grid item xs={2} style={{ display: 'flex' }}>
-              <div style={{ marginLeft: 'auto' }}>
-                <IconButton onClick={fetchAdminInstances} size="large">
-                  <Autorenew style={{ color: 'var(--iconButtonColor)' }} />
-                </IconButton>
-              </div>
-            </Grid>
-          </Grid>
+          <InputSelect
+            name="instance"
+            label={t('admin:components.bot.instance')}
+            value={state.instance}
+            error={formErrors.location}
+            menu={instanceMenu}
+            onChange={handleInputChange}
+            endControl={
+              <IconButton onClick={fetchAdminInstances}>
+                <Autorenew style={{ color: 'var(--iconButtonColor)' }} />
+              </IconButton>
+            }
+          />
 
           <AddCommand
             command={command}
@@ -259,7 +235,6 @@ const CreateBot = () => {
           />
         </form>
       </CardContent>
-      <AlertMessage open={open} handleClose={handleClose} severity="warning" message={error} />
     </Card>
   )
 }

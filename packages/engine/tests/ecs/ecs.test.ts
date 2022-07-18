@@ -77,7 +77,7 @@ describe('ECS', () => {
     assert(world)
     const entities = world.entityQuery()
     console.log(entities)
-    assert.strictEqual(entities.length, 1)
+    assert.strictEqual(entities.length, 2)
     assert.strictEqual(entities[0], world.worldEntity)
   })
 
@@ -90,9 +90,9 @@ describe('ECS', () => {
     const entity = createEntity()
     const world = useWorld()
     const entities = world.entityQuery()
-    assert.strictEqual(entities.length, 2)
-    assert.strictEqual(entities[0], world.worldEntity)
-    assert.strictEqual(entities[1], entity)
+    assert.strictEqual(entities.length, 3)
+    assert(entities.includes(world.worldEntity))
+    assert(entities.includes(entity))
   })
 
   it('should support enter and exit queries', () => {
@@ -218,7 +218,7 @@ describe('ECS', () => {
     const mockValue = Math.random()
     addComponent(entity, MockComponent, { mockValue })
     const entities = world.entityQuery()
-    assert.deepStrictEqual(entity, entities[1])
+    assert(entities.includes(entity))
     removeEntity(entity)
     assert.ok(!getComponent(entity, MockComponent))
     assert.ok(getComponent(entity, MockComponent, true))

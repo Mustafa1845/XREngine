@@ -21,7 +21,7 @@ export const retriggerBuilderService = async (app: Application) => {
     try {
       logger.info('Attempting to reload k8s clients!')
       const restartClientsResponse = await app.k8AppsClient.patchNamespacedDeployment(
-        `${config.server.releaseName}-builder-xrengine-builder-test`,
+        `${config.server.releaseName}-builder-xrengine-builder`,
         'default',
         {
           spec: {

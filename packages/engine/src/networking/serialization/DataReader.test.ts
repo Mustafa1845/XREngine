@@ -5,12 +5,15 @@ import { Group, Quaternion, Vector3 } from 'three'
 import { NetworkId } from '@xrengine/common/src/interfaces/NetworkId'
 import { UserId } from '@xrengine/common/src/interfaces/UserId'
 
+import { createMockNetwork } from '../../../tests/util/createMockNetwork'
+import { roundNumberToPlaces } from '../../common/functions/roundVector'
 import { createQuaternionProxy, createVector3Proxy } from '../../common/proxies/three'
 import { Engine } from '../../ecs/classes/Engine'
 import { Entity } from '../../ecs/classes/Entity'
 import { addComponent } from '../../ecs/functions/ComponentFunctions'
 import { createEntity } from '../../ecs/functions/EntityFunctions'
 import { createEngine } from '../../initializeEngine'
+import { VelocityComponent } from '../../physics/components/VelocityComponent'
 import { TransformComponent } from '../../transform/components/TransformComponent'
 import { XRHandsInputComponent } from '../../xr/components/XRHandsInputComponent'
 import { XRHandBones } from '../../xr/types/XRHandBones'
@@ -21,6 +24,7 @@ import {
   createDataReader,
   readComponent,
   readComponentProp,
+  readCompressedVector3,
   readEntities,
   readEntity,
   readPosition,
@@ -32,6 +36,7 @@ import {
 } from './DataReader'
 import {
   createDataWriter,
+  writeCompressedVector3,
   writeEntities,
   writeEntity,
   writePosition,
@@ -47,6 +52,7 @@ import { createViewCursor, readFloat32, readUint8, readUint32, sliceViewCursor, 
 describe('DataReader', () => {
   beforeEach(() => {
     createEngine()
+    createMockNetwork()
   })
 
   it('should checkBitflag', () => {
@@ -61,7 +67,7 @@ describe('DataReader', () => {
 
   it('should readComponent', () => {
     const view = createViewCursor()
-    const entity = 1234 as Entity
+    const entity = 42 as Entity
 
     const [x, y, z] = [1.5, 2.5, 3.5]
     TransformComponent.position.x[entity] = x
@@ -105,7 +111,7 @@ describe('DataReader', () => {
 
   it('should readComponentProp', () => {
     const view = createViewCursor()
-    const entity = 1234 as Entity
+    const entity = 42 as Entity
 
     const prop = TransformComponent.position.x as unknown as TypedArray
 
@@ -124,7 +130,7 @@ describe('DataReader', () => {
 
   it('should readVector3', () => {
     const view = createViewCursor()
-    const entity = 1234 as Entity
+    const entity = 42 as Entity
     const position = TransformComponent.position as unknown as Vector3SoA
     const [x, y, z] = [1.5, 2.5, 3.5]
     position.x[entity] = x
@@ -160,7 +166,7 @@ describe('DataReader', () => {
 
   it('should readVector4', () => {
     const view = createViewCursor()
-    const entity = 1234 as Entity
+    const entity = 42 as Entity
     const rotation = TransformComponent.rotation
     const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
     rotation.x[entity] = x
@@ -169,6 +175,7 @@ describe('DataReader', () => {
     rotation.w[entity] = w
 
     const readRotation = readVector4(rotation)
+    const writeRotation = writeVector4(rotation)
 
     writeRotation(view, entity)
 
@@ -201,7 +208,7 @@ describe('DataReader', () => {
 
   it('should readPosition', () => {
     const view = createViewCursor()
-    const entity = 1234 as Entity
+    const entity = 42 as Entity
     const position = TransformComponent.position
     const [x, y, z] = [1.5, 2.5, 3.5]
     position.x[entity] = x
@@ -233,11 +240,16 @@ describe('DataReader', () => {
     strictEqual(TransformComponent.position.z[entity], z)
   })
 
-  it('should readRotation', () => {
+  it('should readCompressedRotation', () => {
     const view = createViewCursor()
-    const entity = 1234 as Entity
+    const entity = 42 as Entity
     const rotation = TransformComponent.rotation
-    const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
+
+    // construct values for a valid quaternion
+    const [a, b, c] = [0.167, 0.167, 0.167]
+    let d = Math.sqrt(1 - (a * a + b * b + c * c))
+
+    const [x, y, z, w] = [a, b, c, d]
     rotation.x[entity] = x
     rotation.y[entity] = y
     rotation.z[entity] = z
@@ -254,33 +266,57 @@ describe('DataReader', () => {
 
     readRotation(view, entity)
 
-    strictEqual(TransformComponent.rotation.x[entity], x)
-    strictEqual(TransformComponent.rotation.y[entity], y)
-    strictEqual(TransformComponent.rotation.z[entity], z)
-    strictEqual(TransformComponent.rotation.w[entity], w)
+    strictEqual(view.cursor, Uint8Array.BYTES_PER_ELEMENT + Float32Array.BYTES_PER_ELEMENT)
 
-    rotation.y[entity] = 10.5
-    rotation.w[entity] = 11.5
+    // Round values to 3 decimal places and compare
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.x[entity], 3), roundNumberToPlaces(x, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.y[entity], 3), roundNumberToPlaces(y, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.z[entity], 3), roundNumberToPlaces(z, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.w[entity], 3), roundNumberToPlaces(w, 3))
+  })
+
+  it('should readCompressedVector3', () => {
+    const view = createViewCursor()
+    const entity = 42 as Entity
+    const rotation = TransformComponent.rotation
+
+    const [x, y, z] = [1.333, 2.333, 3.333]
+    VelocityComponent.linear.x[entity] = x
+    VelocityComponent.linear.y[entity] = y
+    VelocityComponent.linear.z[entity] = z
+
+    writeCompressedVector3(VelocityComponent.linear)(view, entity)
+
+    VelocityComponent.linear.x[entity] = 0
+    VelocityComponent.linear.y[entity] = 0
+    VelocityComponent.linear.z[entity] = 0
 
     view.cursor = 0
 
-    writeRotation(view, entity)
+    readCompressedVector3(VelocityComponent.linear)(view, entity)
 
-    strictEqual(TransformComponent.rotation.x[entity], x)
-    strictEqual(TransformComponent.rotation.y[entity], 10.5)
-    strictEqual(TransformComponent.rotation.z[entity], z)
-    strictEqual(TransformComponent.rotation.w[entity], 11.5)
+    strictEqual(view.cursor, Uint8Array.BYTES_PER_ELEMENT + Float32Array.BYTES_PER_ELEMENT)
+
+    // Round values to 3 decimal places and compare
+    strictEqual(roundNumberToPlaces(VelocityComponent.linear.x[entity], 1), roundNumberToPlaces(x, 1))
+    strictEqual(roundNumberToPlaces(VelocityComponent.linear.y[entity], 1), roundNumberToPlaces(y, 1))
+    strictEqual(roundNumberToPlaces(VelocityComponent.linear.z[entity], 1), roundNumberToPlaces(z, 1))
   })
 
   it('should readTransform', () => {
     const view = createViewCursor()
     const entity = createEntity()
 
-    const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
+    // construct values for a valid quaternion
+    const [a, b, c] = [0.167, 0.167, 0.167]
+    let d = Math.sqrt(1 - (a * a + b * b + c * c))
+
+    const [posX, posY, posZ] = [1.5, 2.5, 3.5]
+    const [rotX, rotY, rotZ, rotW] = [a, b, c, d]
 
     const transform = addComponent(entity, TransformComponent, {
-      position: createVector3Proxy(TransformComponent.position, entity).set(x, y, z),
-      rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(x, y, z, w),
+      position: createVector3Proxy(TransformComponent.position, entity).set(posX, posY, posZ),
+      rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(rotX, rotY, rotZ, rotW),
       scale: new Vector3(1, 1, 1)
     })
 
@@ -298,35 +334,30 @@ describe('DataReader', () => {
 
     readTransform(view, entity)
 
-    strictEqual(TransformComponent.position.x[entity], x)
-    strictEqual(TransformComponent.position.y[entity], y)
-    strictEqual(TransformComponent.position.z[entity], z)
-    strictEqual(TransformComponent.rotation.x[entity], x)
-    strictEqual(TransformComponent.rotation.y[entity], y)
-    strictEqual(TransformComponent.rotation.z[entity], z)
-    strictEqual(TransformComponent.rotation.w[entity], w)
+    strictEqual(TransformComponent.position.x[entity], posX)
+    strictEqual(TransformComponent.position.y[entity], posY)
+    strictEqual(TransformComponent.position.z[entity], posZ)
+    // Round values to 3 decimal places and compare
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.x[entity], 3), roundNumberToPlaces(rotX, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.y[entity], 3), roundNumberToPlaces(rotY, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.z[entity], 3), roundNumberToPlaces(rotZ, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.w[entity], 3), roundNumberToPlaces(rotW, 3))
 
     transform.position.x = 0
-    transform.rotation.z = 0
 
     view.cursor = 0
 
     writeTransform(view, entity)
 
-    transform.position.x = x
-    transform.rotation.z = z
+    transform.position.x = posX
 
     view.cursor = 0
 
     readTransform(view, entity)
 
     strictEqual(TransformComponent.position.x[entity], 0)
-    strictEqual(TransformComponent.position.y[entity], y)
-    strictEqual(TransformComponent.position.z[entity], z)
-    strictEqual(TransformComponent.rotation.x[entity], x)
-    strictEqual(TransformComponent.rotation.y[entity], y)
-    strictEqual(TransformComponent.rotation.z[entity], 0)
-    strictEqual(TransformComponent.rotation.w[entity], w)
+    strictEqual(TransformComponent.position.y[entity], posY)
+    strictEqual(TransformComponent.position.z[entity], posZ)
   })
 
   it('should readXRHands', () => {
@@ -338,7 +369,12 @@ describe('DataReader', () => {
       joints = joints.concat(bone as any)
     })
 
-    const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
+    // construct values for a valid quaternion
+    const [a, b, c] = [0.167, 0.167, 0.167]
+    let d = Math.sqrt(1 - (a * a + b * b + c * c))
+
+    const [posX, posY, posZ] = [1.5, 2.5, 3.5]
+    const [rotX, rotY, rotZ, rotW] = [a, b, c, d]
 
     const hands = [new Group(), new Group()]
     hands[0].userData.handedness = 'left'
@@ -353,8 +389,8 @@ describe('DataReader', () => {
 
       // proxify and copy values
       joints.forEach((jointName) => {
-        createVector3Proxy(XRHandsInputComponent[handedness][jointName].position, entity).set(x, y, z)
-        createQuaternionProxy(XRHandsInputComponent[handedness][jointName].quaternion, entity).set(x, y, z, w)
+        createVector3Proxy(TransformComponent.position, entity).set(posX, posY, posZ),
+          createQuaternionProxy(TransformComponent.rotation, entity).set(rotX, rotY, rotZ, rotW)
       })
     })
 
@@ -387,14 +423,14 @@ describe('DataReader', () => {
       const handedness = hand.userData.handedness
 
       joints.forEach((jointName) => {
-        strictEqual(XRHandsInputComponent[handedness][jointName].position.x[entity], x)
-        strictEqual(XRHandsInputComponent[handedness][jointName].position.y[entity], y)
-        strictEqual(XRHandsInputComponent[handedness][jointName].position.z[entity], z)
-
-        strictEqual(XRHandsInputComponent[handedness][jointName].quaternion.x[entity], x)
-        strictEqual(XRHandsInputComponent[handedness][jointName].quaternion.y[entity], y)
-        strictEqual(XRHandsInputComponent[handedness][jointName].quaternion.z[entity], z)
-        strictEqual(XRHandsInputComponent[handedness][jointName].quaternion.w[entity], w)
+        strictEqual(TransformComponent.position.x[entity], posX)
+        strictEqual(TransformComponent.position.y[entity], posY)
+        strictEqual(TransformComponent.position.z[entity], posZ)
+        // Round values to 3 decimal places and compare
+        strictEqual(roundNumberToPlaces(TransformComponent.rotation.x[entity], 3), roundNumberToPlaces(rotX, 3))
+        strictEqual(roundNumberToPlaces(TransformComponent.rotation.y[entity], 3), roundNumberToPlaces(rotY, 3))
+        strictEqual(roundNumberToPlaces(TransformComponent.rotation.z[entity], 3), roundNumberToPlaces(rotZ, 3))
+        strictEqual(roundNumberToPlaces(TransformComponent.rotation.w[entity], 3), roundNumberToPlaces(rotW, 3))
       })
     })
   })
@@ -408,14 +444,20 @@ describe('DataReader', () => {
 
     NetworkObjectComponent.networkId[entity] = networkId
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map([[userIndex, userId]])
-    Engine.instance.currentWorld.userIdToUserIndex = new Map([[userId, userIndex]])
+    const network = Engine.instance.currentWorld.worldNetwork
+    network.userIndexToUserId = new Map([[userIndex, userId]])
+    network.userIdToUserIndex = new Map([[userId, userIndex]])
 
-    const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
+    // construct values for a valid quaternion
+    const [a, b, c] = [0.167, 0.167, 0.167]
+    let d = Math.sqrt(1 - (a * a + b * b + c * c))
+
+    const [posX, posY, posZ] = [1.5, 2.5, 3.5]
+    const [rotX, rotY, rotZ, rotW] = [a, b, c, d]
 
     const transform = addComponent(entity, TransformComponent, {
-      position: createVector3Proxy(TransformComponent.position, entity).set(x, y, z),
-      rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(x, y, z, w),
+      position: createVector3Proxy(TransformComponent.position, entity).set(posX, posY, posZ),
+      rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(rotX, rotY, rotZ, rotW),
       scale: new Vector3(1, 1, 1)
     })
 
@@ -440,35 +482,30 @@ describe('DataReader', () => {
 
     readEntity(view, Engine.instance.currentWorld, userId)
 
-    strictEqual(TransformComponent.position.x[entity], x)
-    strictEqual(TransformComponent.position.y[entity], y)
-    strictEqual(TransformComponent.position.z[entity], z)
-    strictEqual(TransformComponent.rotation.x[entity], x)
-    strictEqual(TransformComponent.rotation.y[entity], y)
-    strictEqual(TransformComponent.rotation.z[entity], z)
-    strictEqual(TransformComponent.rotation.w[entity], w)
+    strictEqual(TransformComponent.position.x[entity], posX)
+    strictEqual(TransformComponent.position.y[entity], posY)
+    strictEqual(TransformComponent.position.z[entity], posZ)
+    // Round values to 3 decimal places and compare
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.x[entity], 3), roundNumberToPlaces(rotX, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.y[entity], 3), roundNumberToPlaces(rotY, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.z[entity], 3), roundNumberToPlaces(rotZ, 3))
+    strictEqual(roundNumberToPlaces(TransformComponent.rotation.w[entity], 3), roundNumberToPlaces(rotW, 3))
 
     transform.position.x = 0
-    transform.rotation.z = 0
 
     view.cursor = 0
 
     writeEntity(view, networkId, entity)
 
-    transform.position.x = x
-    transform.rotation.z = z
+    transform.position.x = posX
 
     view.cursor = 0
 
     readEntity(view, Engine.instance.currentWorld, userId)
 
     strictEqual(TransformComponent.position.x[entity], 0)
-    strictEqual(TransformComponent.position.y[entity], y)
-    strictEqual(TransformComponent.position.z[entity], z)
-    strictEqual(TransformComponent.rotation.x[entity], x)
-    strictEqual(TransformComponent.rotation.y[entity], y)
-    strictEqual(TransformComponent.rotation.z[entity], 0)
-    strictEqual(TransformComponent.rotation.w[entity], w)
+    strictEqual(TransformComponent.position.y[entity], posY)
+    strictEqual(TransformComponent.position.z[entity], posZ)
   })
 
   it('should not readEntity if reading back own data', () => {
@@ -481,8 +518,9 @@ describe('DataReader', () => {
 
     NetworkObjectComponent.networkId[entity] = networkId
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map([[userIndex, userId]])
-    Engine.instance.currentWorld.userIdToUserIndex = new Map([[userId, userIndex]])
+    const network = Engine.instance.currentWorld.worldNetwork
+    network.userIndexToUserId = new Map([[userIndex, userId]])
+    network.userIdToUserIndex = new Map([[userId, userIndex]])
 
     const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
 
@@ -522,7 +560,7 @@ describe('DataReader', () => {
     strictEqual(TransformComponent.rotation.w[entity], 0)
 
     // should update the view cursor accordingly
-    strictEqual(view.cursor, 36)
+    strictEqual(view.cursor, 24)
   })
 
   it('should not readEntity if entity is undefined', () => {
@@ -536,8 +574,9 @@ describe('DataReader', () => {
     Engine.instance.userId = userId
     const userIndex = 0
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map([[userIndex, userId]])
-    Engine.instance.currentWorld.userIdToUserIndex = new Map([[userId, userIndex]])
+    const network = Engine.instance.currentWorld.worldNetwork
+    network.userIndexToUserId = new Map([[userIndex, userId]])
+    network.userIdToUserIndex = new Map([[userId, userIndex]])
 
     const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
 
@@ -568,14 +607,15 @@ describe('DataReader', () => {
     strictEqual(TransformComponent.rotation.w[entity], 0)
 
     // should update the view cursor accordingly
-    strictEqual(view.cursor, 36)
+    strictEqual(view.cursor, 24)
   })
 
   it('should readEntities', () => {
     const writeView = createViewCursor()
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map()
-    Engine.instance.currentWorld.userIdToUserIndex = new Map()
+    const network = Engine.instance.currentWorld.worldNetwork
+    network.userIndexToUserId = new Map()
+    network.userIdToUserIndex = new Map()
 
     const userId = 'userId' as UserId
     const n = 50
@@ -583,14 +623,19 @@ describe('DataReader', () => {
       .fill(0)
       .map(() => createEntity())
 
-    const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
+    // construct values for a valid quaternion
+    const [a, b, c] = [0.167, 0.167, 0.167]
+    let d = Math.sqrt(1 - (a * a + b * b + c * c))
+
+    const [posX, posY, posZ] = [1.5, 2.5, 3.5]
+    const [rotX, rotY, rotZ, rotW] = [a, b, c, d]
 
     entities.forEach((entity) => {
       const networkId = entity as unknown as NetworkId
       const userIndex = entity
       addComponent(entity, TransformComponent, {
-        position: createVector3Proxy(TransformComponent.position, entity).set(x, y, z),
-        rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(x, y, z, w),
+        position: createVector3Proxy(TransformComponent.position, entity).set(posX, posY, posZ),
+        rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(rotX, rotY, rotZ, rotW),
         scale: new Vector3(1, 1, 1)
       })
       addComponent(entity, NetworkObjectComponent, {
@@ -599,8 +644,8 @@ describe('DataReader', () => {
         prefab: '',
         parameters: {}
       })
-      Engine.instance.currentWorld.userIndexToUserId.set(userIndex, userId)
-      Engine.instance.currentWorld.userIdToUserIndex.set(userId, userIndex)
+      network.userIndexToUserId.set(userIndex, userId)
+      network.userIdToUserIndex.set(userId, userIndex)
     })
 
     writeEntities(writeView, entities)
@@ -625,40 +670,47 @@ describe('DataReader', () => {
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]
 
-      strictEqual(TransformComponent.position.x[entity], x)
-      strictEqual(TransformComponent.position.y[entity], y)
-      strictEqual(TransformComponent.position.z[entity], z)
-      strictEqual(TransformComponent.rotation.x[entity], x)
-      strictEqual(TransformComponent.rotation.y[entity], y)
-      strictEqual(TransformComponent.rotation.z[entity], z)
-      strictEqual(TransformComponent.rotation.w[entity], w)
+      strictEqual(TransformComponent.position.x[entity], posX)
+      strictEqual(TransformComponent.position.y[entity], posY)
+      strictEqual(TransformComponent.position.z[entity], posZ)
+      // Round values to 3 decimal places and compare
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.x[entity], 3), roundNumberToPlaces(rotX, 3))
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.y[entity], 3), roundNumberToPlaces(rotY, 3))
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.z[entity], 3), roundNumberToPlaces(rotZ, 3))
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.w[entity], 3), roundNumberToPlaces(rotW, 3))
     }
   })
 
   it('should createDataReader', () => {
     const write = createDataWriter()
+    const network = Engine.instance.currentWorld.worldNetwork
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map()
-    Engine.instance.currentWorld.userIdToUserIndex = new Map()
+    network.userIndexToUserId = new Map()
+    network.userIdToUserIndex = new Map()
 
     Engine.instance.userId = 'userId' as UserId
     const userId = Engine.instance.userId
     const userIndex = 0
-    Engine.instance.currentWorld.userIndexToUserId.set(userIndex, userId)
-    Engine.instance.currentWorld.userIdToUserIndex.set(userId, userIndex)
+    network.userIndexToUserId.set(userIndex, userId)
+    network.userIdToUserIndex.set(userId, userIndex)
 
     const n = 10
     const entities: Entity[] = Array(n)
       .fill(0)
       .map(() => createEntity())
 
-    const [x, y, z, w] = [1.5, 2.5, 3.5, 4.5]
+    // construct values for a valid quaternion
+    const [a, b, c] = [0.167, 0.167, 0.167]
+    let d = Math.sqrt(1 - (a * a + b * b + c * c))
+
+    const [posX, posY, posZ] = [1.5, 2.5, 3.5]
+    const [rotX, rotY, rotZ, rotW] = [a, b, c, d]
 
     entities.forEach((entity) => {
       const networkId = entity as unknown as NetworkId
       addComponent(entity, TransformComponent, {
-        position: createVector3Proxy(TransformComponent.position, entity).set(x, y, z),
-        rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(x, y, z, w),
+        position: createVector3Proxy(TransformComponent.position, entity).set(posX, posY, posZ),
+        rotation: createQuaternionProxy(TransformComponent.rotation, entity).set(rotX, rotY, rotZ, rotW),
         scale: new Vector3(1, 1, 1)
       })
       addComponent(entity, NetworkObjectComponent, {
@@ -669,7 +721,7 @@ describe('DataReader', () => {
       })
     })
 
-    const packet = write(Engine.instance.currentWorld, entities)
+    const packet = write(Engine.instance.currentWorld, network, entities)
 
     const readView = createViewCursor(packet)
 
@@ -693,18 +745,15 @@ describe('DataReader', () => {
       strictEqual(readUint8(readView), 0b111)
 
       // read position values
-      strictEqual(readFloat32(readView), x)
-      strictEqual(readFloat32(readView), y)
-      strictEqual(readFloat32(readView), z)
+      strictEqual(readFloat32(readView), posX)
+      strictEqual(readFloat32(readView), posY)
+      strictEqual(readFloat32(readView), posZ)
 
       // read writeRotation changeMask
       strictEqual(readUint8(readView), 0b1111)
 
       // read rotation values
-      strictEqual(readFloat32(readView), x)
-      strictEqual(readFloat32(readView), y)
-      strictEqual(readFloat32(readView), z)
-      strictEqual(readFloat32(readView), w)
+      readFloat32(readView)
     }
 
     for (let i = 0; i < entities.length; i++) {
@@ -721,26 +770,28 @@ describe('DataReader', () => {
 
     const read = createDataReader()
 
-    read(Engine.instance.currentWorld, packet)
+    read(Engine.instance.currentWorld, network, packet)
 
     for (let i = 0; i < entities.length; i++) {
       const entity = entities[i]
 
-      strictEqual(TransformComponent.position.x[entity], x)
-      strictEqual(TransformComponent.position.y[entity], y)
-      strictEqual(TransformComponent.position.z[entity], z)
-      strictEqual(TransformComponent.rotation.x[entity], x)
-      strictEqual(TransformComponent.rotation.y[entity], y)
-      strictEqual(TransformComponent.rotation.z[entity], z)
-      strictEqual(TransformComponent.rotation.w[entity], w)
+      strictEqual(TransformComponent.position.x[entity], posX)
+      strictEqual(TransformComponent.position.y[entity], posY)
+      strictEqual(TransformComponent.position.z[entity], posZ)
+      // Round values to 3 decimal places and compare
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.x[entity], 3), roundNumberToPlaces(rotX, 3))
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.y[entity], 3), roundNumberToPlaces(rotY, 3))
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.z[entity], 3), roundNumberToPlaces(rotZ, 3))
+      strictEqual(roundNumberToPlaces(TransformComponent.rotation.w[entity], 3), roundNumberToPlaces(rotW, 3))
     }
   })
 
   it('should createDataReader and return empty packet if no changes were made on a fixedTick not divisible by 60', () => {
     const write = createDataWriter()
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map()
-    Engine.instance.currentWorld.userIdToUserIndex = new Map()
+    const network = Engine.instance.currentWorld.worldNetwork
+    network.userIndexToUserId = new Map()
+    network.userIdToUserIndex = new Map()
     Engine.instance.currentWorld.fixedTick = 1
 
     const n = 10
@@ -765,11 +816,11 @@ describe('DataReader', () => {
         prefab: '',
         parameters: {}
       })
-      Engine.instance.currentWorld.userIndexToUserId.set(userIndex, userId)
-      Engine.instance.currentWorld.userIdToUserIndex.set(userId, userIndex)
+      network.userIndexToUserId.set(userIndex, userId)
+      network.userIdToUserIndex.set(userId, userIndex)
     })
 
-    const packet = write(Engine.instance.currentWorld, entities)
+    const packet = write(Engine.instance.currentWorld, network, entities)
 
     strictEqual(packet.byteLength, 0)
 
@@ -782,9 +833,10 @@ describe('DataReader', () => {
 
   it('should createDataReader and return populated packet if no changes were made but on a fixedTick divisible by 60', () => {
     const write = createDataWriter()
+    const network = Engine.instance.currentWorld.worldNetwork
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map()
-    Engine.instance.currentWorld.userIdToUserIndex = new Map()
+    network.userIndexToUserId = new Map()
+    network.userIdToUserIndex = new Map()
     Engine.instance.currentWorld.fixedTick = 60
 
     const n = 10
@@ -809,20 +861,21 @@ describe('DataReader', () => {
         prefab: '',
         parameters: {}
       })
-      Engine.instance.currentWorld.userIndexToUserId.set(userIndex, userId)
-      Engine.instance.currentWorld.userIdToUserIndex.set(userId, userIndex)
+      network.userIndexToUserId.set(userIndex, userId)
+      network.userIdToUserIndex.set(userId, userIndex)
     })
 
-    const packet = write(Engine.instance.currentWorld, entities)
+    const packet = write(Engine.instance.currentWorld, network, entities)
 
-    strictEqual(packet.byteLength, 372)
+    strictEqual(packet.byteLength, 252)
   })
 
   it('should createDataReader and detect changes', () => {
     const write = createDataWriter()
 
-    Engine.instance.currentWorld.userIndexToUserId = new Map()
-    Engine.instance.currentWorld.userIdToUserIndex = new Map()
+    const network = Engine.instance.currentWorld.worldNetwork
+    network.userIndexToUserId = new Map()
+    network.userIdToUserIndex = new Map()
     Engine.instance.currentWorld.fixedTick = 1
 
     const n = 10
@@ -847,11 +900,11 @@ describe('DataReader', () => {
         prefab: '',
         parameters: {}
       })
-      Engine.instance.currentWorld.userIndexToUserId.set(userIndex, userId)
-      Engine.instance.currentWorld.userIdToUserIndex.set(userId, userIndex)
+      network.userIndexToUserId.set(userIndex, userId)
+      network.userIdToUserIndex.set(userId, userIndex)
     })
 
-    let packet = write(Engine.instance.currentWorld, entities)
+    let packet = write(Engine.instance.currentWorld, network, entities)
 
     strictEqual(packet.byteLength, 0)
 
@@ -867,7 +920,7 @@ describe('DataReader', () => {
     TransformComponent.position.y[entity] = 1
     TransformComponent.position.z[entity] = 1
 
-    packet = write(Engine.instance.currentWorld, entities)
+    packet = write(Engine.instance.currentWorld, network, entities)
 
     strictEqual(packet.byteLength, 31)
 

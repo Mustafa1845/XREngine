@@ -12,14 +12,14 @@ import path from 'path'
 import { Socket } from 'socket.io'
 
 import { pipe } from '@xrengine/common/src/utils/pipe'
-import { Application } from '@xrengine/server-core/declarations'
-import config from '@xrengine/server-core/src/appconfig'
-import logger from '@xrengine/server-core/src/logger'
-import sequelize from '@xrengine/server-core/src/sequelize'
-import services from '@xrengine/server-core/src/services'
-import authentication from '@xrengine/server-core/src/user/authentication'
 
+import { Application, ServerTypeMode } from '../declarations'
+import config from './appconfig'
+import logger from './logger'
 import { createDefaultStorageProvider, createIPFSStorageProvider } from './media/storageprovider/storageprovider'
+import sequelize from './sequelize'
+import services from './services'
+import authentication from './user/authentication'
 
 export const configureOpenAPI = () => (app: Application) => {
   app.configure(
@@ -50,14 +50,14 @@ export const configureOpenAPI = () => (app: Application) => {
 }
 
 export const configureSocketIO =
-  (gameserver = false, onSocket = (app: Application, socket: Socket) => {}) =>
+  (instanceserver = false, onSocket = (app: Application, socket: Socket) => {}) =>
   (app: Application) => {
     const origin = [
       'https://' + config.server.clientHost,
       'capacitor://' + config.server.clientHost,
       'ionic://' + config.server.clientHost
     ]
-    if (!gameserver) origin.push('https://localhost:3001')
+    if (!instanceserver) origin.push('https://localhost:3001')
     app.configure(
       socketio(
         {
@@ -66,7 +66,7 @@ export const configureSocketIO =
             origin,
             methods: ['OPTIONS', 'GET', 'POST'],
             allowedHeaders: '*',
-            preflightContinue: gameserver,
+            preflightContinue: instanceserver,
             credentials: true
           }
         },
@@ -117,7 +117,10 @@ export const serverPipe = pipe(configureOpenAPI(), configureSocketIO(), configur
   app: Application
 ) => Application
 
-export const createFeathersExpressApp = (configurationPipe = serverPipe): Application => {
+export const createFeathersExpressApp = (
+  serverMode: ServerTypeMode = 'API',
+  configurationPipe = serverPipe
+): Application => {
   createDefaultStorageProvider()
 
   if (config.ipfs.enabled) {
@@ -125,6 +128,7 @@ export const createFeathersExpressApp = (configurationPipe = serverPipe): Applic
   }
 
   const app = express(feathers()) as Application
+  app.serverMode = serverMode
   app.set('nextReadyEmitter', new EventEmitter())
 
   // Feathers authentication-oauth will only append the port in production, but then it will also
@@ -149,7 +153,7 @@ export const createFeathersExpressApp = (configurationPipe = serverPipe): Applic
     cors({
       origin: true,
       credentials: true
-    })
+    }) as any
   )
   app.use(compress())
   app.use(json())

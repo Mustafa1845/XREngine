@@ -1,16 +1,10 @@
 {
-  "pageLoader": {
-    "loading": "Loading page..."
-  },
   "tooltip": {
     "pressKey": "Press {{tip}} to {{message}}"
   },
   "toast": {
     "joined": "joined",
     "left": "left"
-  },
-  "navUserWidget": {
-    "login": "Log In"
   },
   "loader": {
     "connecting": "Connecting to world...",
@@ -42,8 +36,7 @@
     "worldStore": "World Store",
     "engineStore": "Engine Store",
     "namedEntities": "Named Entities",
-    "networkObject": "Network Object",
-    "networkClients": "Network Clients"
+    "networks": "Networks"
   },
   "recording": {
     "videoRecorder": "Video recorder",
@@ -58,7 +51,7 @@
     "stopRecording": "Stop recording"
   },
   "typing": "Typing...",
-  "gameServer": {
+  "instanceServer": {
     "browserError": "Browser Error",
     "browserErrorMessage": "Your browser does not support storage in private browsing mode. Either try another browser, or exit private browsing mode.",
     "noAvailableServers": "No Available Servers",

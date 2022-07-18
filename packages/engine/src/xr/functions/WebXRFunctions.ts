@@ -34,31 +34,10 @@ const assignControllerAndGrip = (xrManager, controller, grip, i): void => {
 
 export const mapXRControllers = (xrInput: XRInputSourceComponentType): void => {
   const xrm = EngineRenderer.instance.xrManager
-  const session = xrm.getSession()
 
-  for (let i = 0; i < 2; i++) {
-    const j = 1 - i
-    const inputSource = session?.inputSources[i]
-    if (!inputSource) {
-      console.log('No xr input source available for index', i)
-      continue
-    }
-
-    if (inputSource.hand) {
-      console.log('XR hand input source should not be mapped to controller')
-      continue
-    }
-
-    if (inputSource.handedness === 'left') {
-      assignControllerAndGrip(xrm, xrInput.controllerLeft, xrInput.controllerGripLeft, i)
-      assignControllerAndGrip(xrm, xrInput.controllerRight, xrInput.controllerGripRight, j)
-    } else if (inputSource.handedness === 'right') {
-      assignControllerAndGrip(xrm, xrInput.controllerLeft, xrInput.controllerGripLeft, j)
-      assignControllerAndGrip(xrm, xrInput.controllerRight, xrInput.controllerGripRight, i)
-    } else {
-      console.warn('Could not determine xr input source handedness', i)
-    }
-  }
+  // https://github.com/mrdoob/three.js/blob/0c26bb4bb8220126447c8373154ac045588441de/src/renderers/webxr/WebXRManager.js#L355
+  assignControllerAndGrip(xrm, xrInput.controllerLeft, xrInput.controllerGripLeft, 0)
+  assignControllerAndGrip(xrm, xrInput.controllerRight, xrInput.controllerGripRight, 1)
 
   if (xrInput.controllerGripLeft.parent) {
     xrInput.controllerGripLeftParent = xrInput.controllerGripLeft.parent as Group
@@ -198,7 +177,7 @@ export const bindXRHandEvents = () => {
       initializeHandModel(world.localClientEntity, controller, xrInputSource.handedness)
 
       if (!eventSent) {
-        dispatchAction(WorldNetworkAction.xrHandsConnected({}), [Engine.instance.currentWorld.worldNetwork.hostId])
+        dispatchAction(WorldNetworkAction.xrHandsConnected({}), Engine.instance.currentWorld.worldNetwork.hostId)
         eventSent = true
       }
     })
@@ -213,19 +192,15 @@ export const bindXRHandEvents = () => {
 export const startWebXR = async (): Promise<void> => {
   const world = Engine.instance.currentWorld
 
-  removeComponent(world.localClientEntity, FollowCameraComponent)
+  removeComponent(Engine.instance.currentWorld.cameraEntity, FollowCameraComponent)
   container.add(Engine.instance.currentWorld.camera)
 
   setupXRInputSourceComponent(world.localClientEntity)
 
-  // Default mapping
-  assignControllerAndGrip(EngineRenderer.instance.xrManager, controllerLeft, controllerGripLeft, 0)
-  assignControllerAndGrip(EngineRenderer.instance.xrManager, controllerRight, controllerGripRight, 1)
-
   const avatarInputState = accessAvatarInputSettingsState()
   dispatchAction(
     WorldNetworkAction.setXRMode({ enabled: true, avatarInputControllerType: avatarInputState.controlType.value }),
-    [Engine.instance.currentWorld.worldNetwork.hostId]
+    Engine.instance.currentWorld.worldNetwork.hostId
   )
 
   bindXRControllers()
@@ -244,7 +219,10 @@ export const endXR = (): void => {
   Engine.instance.currentWorld.scene.add(Engine.instance.currentWorld.camera)
 
   const world = Engine.instance.currentWorld
-  addComponent(world.localClientEntity, FollowCameraComponent, FollowCameraDefaultValues)
+  addComponent(Engine.instance.currentWorld.cameraEntity, FollowCameraComponent, {
+    ...FollowCameraDefaultValues,
+    targetEntity: Engine.instance.currentWorld.localClientEntity
+  })
   removeComponent(world.localClientEntity, XRInputSourceComponent)
   removeComponent(world.localClientEntity, XRHandsInputComponent)
 
@@ -365,7 +343,7 @@ export const getHeadTransform = (entity: Entity): { position: Vector3; rotation:
       scale: uniformScale
     }
   }
-  const cameraTransform = getComponent(Engine.instance.currentWorld.activeCameraEntity, TransformComponent)
+  const cameraTransform = getComponent(Engine.instance.currentWorld.cameraEntity, TransformComponent)
   return {
     position: cameraTransform.position,
     rotation: cameraTransform.rotation,

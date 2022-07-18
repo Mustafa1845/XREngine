@@ -17,8 +17,7 @@ interface Props {
   location: any
 }
 
-const DashboardMenuItem = (props: Props) => {
-  const { location } = props
+const DashboardMenuItem = ({ location }: Props) => {
   const { pathname } = location
   const scopes = useAuthState().user?.scopes?.value || []
   const { t } = useTranslation()
@@ -56,7 +55,7 @@ const DashboardMenuItem = (props: Props) => {
           .filter(Boolean)
           .map((sidebarItem, index) => {
             return (
-              <Link key={index} to={sidebarItem.path} className={styles.textLink}>
+              <Link key={index} to={sidebarItem.path} className={styles.textLink} title={t(sidebarItem.name)}>
                 <ListItem
                   classes={{ selected: styles.selected }}
                   style={{ color: 'var(--iconButtonColor)' }}
