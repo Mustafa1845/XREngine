@@ -26,6 +26,17 @@ import multiLogger from '@xrengine/server-core/src/logger'
 
 import channels from './channels'
 import { setupSocketFunctions } from './SocketFunctions'
+var apm = require('elastic-apm-node').start({
+  // Override the service name from package.json
+  // Allowed characters: a-z, A-Z, 0-9, -, _, and space
+  serviceName: 'instanceserver',
+  // Use if APM Server requires a secret token
+  secretToken: 'hjOVwU4VLtKXhXE7MS',
+  // Set the custom APM Server URL (default: http://localhost:8200)
+  serverUrl: 'https://3e3ed2952eed4865afe1d680d51e69f1.apm.us-east-2.aws.elastic-cloud.com:443',
+  // Set the service environment
+  environment: 'production'
+  })
 
 const logger = multiLogger.child({ component: 'instanceserver' })
 
