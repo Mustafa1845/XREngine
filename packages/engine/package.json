@@ -1,5 +1,6 @@
 {
   "name": "@xrengine/engine",
+  "type": "module",
   "author": {
     "name": "XRFoundation Collective",
     "email": "hello@xrfoundation.io",

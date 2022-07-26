@@ -1,5 +1,6 @@
 {
   "name": "@xrengine/instanceserver",
+  "type": "module",
   "description": "Multiplayer Instanceserver for XREngine",
   "version": "0.5.7",
   "private": true,
