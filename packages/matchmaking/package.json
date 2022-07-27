@@ -1,5 +1,6 @@
 {
   "name": "@xrengine/matchmaking",
+  "type": "module",
   "version": "0.5.7",
   "author": {
     "name": "XRFoundation Collective",
