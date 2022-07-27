@@ -1,6 +1,5 @@
 {
   "name": "@xrengine/server-core",
-  "type": "module",
   "description": "Shared components for XREngine server",
   "version": "0.5.7",
   "repository": {
