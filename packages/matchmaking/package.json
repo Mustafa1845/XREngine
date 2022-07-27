@@ -35,7 +35,7 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "axios": "0.26.1",
-    "node-fetch": "3.2.7"
+    "node-fetch": "2.6.1"
   },
   "devDependencies": {
     "@types/mocha": "9.1.0",
@@ -44,5 +44,4 @@
     "nock": "13.2.4",
     "vite": "2.9.4"
   }
-  
 }
