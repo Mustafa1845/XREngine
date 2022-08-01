@@ -11,6 +11,8 @@ COPY packages/instanceserver/package.json ./packages/instanceserver/
 ARG NODE_ENV
 # RUN npm install --loglevel notice --legacy-peer-deps
 
+COPY packages/instanceserver/package.json /var/xrengine-npm-mount/
+
 RUN npm install --loglevel notice --legacy-peer-deps /var/xrengine-npm-mount
 
 COPY . .
