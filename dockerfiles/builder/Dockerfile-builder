@@ -16,7 +16,9 @@ COPY packages/projects/package.json ./packages/projects/
 COPY packages/server/package.json ./packages/server/
 COPY packages/server-core/package.json ./packages/server-core/
 
-RUN npm install --loglevel notice --legacy-peer-deps
+# RUN npm install --loglevel notice --legacy-peer-deps
+
+RUN npm install --loglevel notice --legacy-peer-deps /var/xrengine-npm-mount
 
 COPY . .
 
