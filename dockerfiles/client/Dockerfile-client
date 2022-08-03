@@ -13,6 +13,8 @@ COPY packages/hyperflux/package.json ./packages/hyperflux/
 
 RUN npm install --production=false --loglevel notice --legacy-peer-deps
 
+
+
 # copy then compile the code
 COPY . .
 
