@@ -304,9 +304,9 @@ fi
 
 if [ -z "$VITE_APP_LOCAL_PRIZE_POOL_ACCOUNT_SEED_PHRASE" ]
 then
-  VITE_APP_LOCAL_PRIZE_POOL_ACCOUNT_SEED_PHRASE=gameserver-local.theoverlay.io
-else
   VITE_APP_LOCAL_PRIZE_POOL_ACCOUNT_SEED_PHRASE="crime silly dolphin wash sponsor you weapon river increase tell number proud"
+else
+  VITE_APP_LOCAL_PRIZE_POOL_ACCOUNT_SEED_PHRASE="$VITE_APP_LOCAL_PRIZE_POOL_ACCOUNT_SEED_PHRASE"
 fi
 
 if [ -z "$VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_PRINCIPAL_ID" ]
@@ -336,6 +336,13 @@ then
   VITE_APP_KYASSHU_LOCAL_HOST_URL=gameserver-local.theoverlay.io
 else
   VITE_APP_KYASSHU_LOCAL_HOST_URL="$VITE_APP_KYASSHU_LOCAL_HOST_URL"
+fi
+
+if [ -z "$VITE_APP_IC_ENV" ]
+then
+  VITE_APP_IC_ENV=gameserver-local.theoverlay.io
+else
+  VITE_APP_IC_ENV="$VITE_APP_IC_ENV"
 fi
 
 docker start xrengine_minikube_db
@@ -394,6 +401,7 @@ DOCKER_BUILDKIT=1 docker build -t xrengine \
   --build-arg VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_PRINCIPAL_ID=$VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_PRINCIPAL_ID \
   --build-arg VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_SEED_PHRASE="$VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_SEED_PHRASE" \
   --build-arg VITE_APP_LOCAL_BALL_COIN_TRANSACTION_FEE=$VITE_APP_LOCAL_BALL_COIN_TRANSACTION_FEE \
-  --build-arg VITE_APP_KYASSHU_LOCAL_HOST_URL=$VITE_APP_KYASSHU_LOCAL_HOST_URL .
+  --build-arg VITE_APP_KYASSHU_LOCAL_HOST_URL=$VITE_APP_KYASSHU_LOCAL_HOST_URL \
+  --build-arg VITE_APP_IC_ENV=$VITE_APP_IC_ENV .
   
 DOCKER_BUILDKIT=1 docker build -t xrengine-testbot -f ./dockerfiles/testbot/Dockerfile-testbot .
