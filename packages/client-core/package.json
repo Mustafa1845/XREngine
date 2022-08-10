@@ -40,7 +40,7 @@
     "@google/model-viewer": "1.11.1",
     "@iconify/react": "3.2.0",
     "@mui/icons-material": "5.6.1",
-    "@mui/lab": "^5.0.0-alpha.73",
+    "@mui/lab": "5.0.0-alpha.73",
     "@mui/material": "5.6.1",
     "@mui/styled-engine-sc": "5.6.1",
     "@mui/styles": "5.6.1",
