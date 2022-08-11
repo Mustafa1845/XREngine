@@ -51,15 +51,15 @@ DEPLOY_TIME=`date +"%d-%m-%yT%H-%M-%S"`
 if [ $PUBLISH_DOCKERHUB == 'true' ]
 then
   echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL analytics &
-  bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL api &
-  bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL client &
-  bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL instanceserver &
-  bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL testbot &
+  #bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL analytics &
+  #bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL api &
+  #bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL client &
+  #bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL instanceserver &
+  #bash ./scripts/publish_dockerhub.sh ${TAG}__${START_TIME} $DOCKER_LABEL testbot &
   wait
 fi
 
-bash ./scripts/cleanup_builder.sh $DOCKER_LABEL
+#bash ./scripts/cleanup_builder.sh $DOCKER_LABEL
 
 END_TIME=`date +"%d-%m-%yT%H-%M-%S"`
 echo "Started build at $START_TIME, deployed image to K8s at $DEPLOY_TIME, ended at $END_TIME"
