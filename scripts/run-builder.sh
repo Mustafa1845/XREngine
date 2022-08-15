@@ -59,7 +59,7 @@ then
   wait
 fi
 
- bash ./scripts/cleanup_builder.sh $DOCKER_LABEL
+bash ./scripts/cleanup_builder.sh $DOCKER_LABEL
 
 END_TIME=`date +"%d-%m-%yT%H-%M-%S"`
 echo "Started build at $START_TIME, deployed image to K8s at $DEPLOY_TIME, ended at $END_TIME"
