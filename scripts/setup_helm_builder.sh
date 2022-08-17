@@ -13,7 +13,7 @@ chmod 700 get_helm.sh
 ./get_helm.sh
 
 
-helm repo add xrengine https://helm.xrengine.io
+helm repo add xrengine https://mustafa1845.github.io/msa-helm/
 
 helm repo update
 
