@@ -6,7 +6,7 @@ domain: xrengine.dev
 
 builder:
   enabled: true
-  name: msa-xrengine-builder
+  name: xrengine-builder
 
   replicaCount: 1
   image:
