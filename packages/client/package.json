@@ -36,6 +36,7 @@
     "@mui/material": "5.10.0",
     "@mui/styled-engine-sc": "5.10.0",
     "@mui/styles": "5.9.3",
+    "elastic-apm-node": "3.36.0",
     "@rollup/plugin-inject": "4.0.4",
     "@speigg/hookstate": "3.0.13-stable-state",
     "@xrengine/client-core": "^0.5.7",
