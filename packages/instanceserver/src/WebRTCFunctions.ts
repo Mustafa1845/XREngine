@@ -365,7 +365,36 @@ export async function handleWebRtcTransportCreate(
     }
   }
 
- 
+  const { id, iceParameters, iceCandidates, dtlsParameters } = newTransport
+
+  if (config.kubernetes.enabled) {
+    const serverResult = await network.app.k8AgonesClient.listNamespacedCustomObject(
+      'agones.dev',
+      'v1',
+      'default',
+      'gameservers'
+    )
+    const thisGs = (serverResult?.body! as any).items.find(
+      (server) => server.metadata.name === network.app.instanceServer.objectMeta.name
+    )
+
+    for (let [index, candidate] of iceCandidates.entries()) {
+      iceCandidates[index].port = thisGs.spec?.ports?.find(
+        (portMapping) => portMapping.containerPort === candidate.port
+      ).hostPort
+    }
+  }
+  const clientTransportOptions = {
+    id,
+    sctpParameters: {
+      ...sctpParameters,
+      OS: sctpCapabilities.numStreams.OS,
+      MIS: sctpCapabilities.numStreams.MIS
+    },
+    iceParameters,
+    iceCandidates,
+    dtlsParameters
+  }
 
   newTransport.observer.on('dtlsstatechange', (dtlsState) => {
     if (dtlsState === 'closed') closeTransport(network, newTransport)
