@@ -345,6 +345,13 @@ else
   VITE_APP_IC_ENV="$VITE_APP_IC_ENV"
 fi
 
+if [ -z "$INSTANCESERVER_SHUTDOWN_DELAY_MS" ]
+then
+  INSTANCESERVER_SHUTDOWN_DELAY_MS=gameserver-local.theoverlay.io
+else
+  INSTANCESERVER_SHUTDOWN_DELAY_MS="$INSTANCESERVER_SHUTDOWN_DELAY_MS"
+fi
+
 docker start xrengine_minikube_db
 eval $(minikube docker-env)
 
@@ -402,6 +409,7 @@ DOCKER_BUILDKIT=1 docker build -t xrengine \
   --build-arg VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_SEED_PHRASE="$VITE_APP_LOCAL_BOT_TEAM_ACCOUNT_SEED_PHRASE" \
   --build-arg VITE_APP_LOCAL_BALL_COIN_TRANSACTION_FEE=$VITE_APP_LOCAL_BALL_COIN_TRANSACTION_FEE \
   --build-arg VITE_APP_KYASSHU_LOCAL_HOST_URL=$VITE_APP_KYASSHU_LOCAL_HOST_URL \
-  --build-arg VITE_APP_IC_ENV=$VITE_APP_IC_ENV .
+  --build-arg VITE_APP_IC_ENV=$VITE_APP_IC_ENV \
+  --build-arg INSTANCESERVER_SHUTDOWN_DELAY_MS=$INSTANCESERVER_SHUTDOWN_DELAY_MS .
   
 DOCKER_BUILDKIT=1 docker build -t xrengine-testbot -f ./dockerfiles/testbot/Dockerfile-testbot .
