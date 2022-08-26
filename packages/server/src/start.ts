@@ -17,13 +17,14 @@ var apm = require('elastic-apm-node').start({
 
   // Override the service name from package.json
   // Allowed characters: a-z, A-Z, 0-9, -, _, and space
-  serviceName: '',
+  serviceName: 'API',
   
   // Use if APM Server requires a secret token
   secretToken: '1VfqKalOnO2pXWtWEZ',
   
   // Set the custom APM Server URL (default: http://localhost:8200)
   serverUrl: 'https://b77b94f6272741168d706892d5f88d3d.apm.us-east-2.aws.elastic-cloud.com:443',
+  loglevel: 'trace' ,
   
   // Set the service environment
   environment: 'development'
