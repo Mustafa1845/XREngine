@@ -34,15 +34,15 @@ var apm = require('elastic-apm-node').start({
   serviceName: 'InstanceServer',
   
   // Use if APM Server requires a secret token
-  secretToken: '1VfqKalOnO2pXWtWEZ',
-  loglevel: 'trace' ,
+  secretToken: 'YDpY1c0slX4JOmCM7P',
   
   // Set the custom APM Server URL (default: http://localhost:8200)
-  serverUrl: 'https://b77b94f6272741168d706892d5f88d3d.apm.us-east-2.aws.elastic-cloud.com:443',
+  serverUrl: 'https://a0dae946a98d47be91c060d20f8f0d2e.apm.us-central1.gcp.cloud.es.io:443',
+  logLevel: 'trace' ,
+
   
   // Set the service environment
   environment: 'development'
-  
   })
 
 const logger = multiLogger.child({ component: 'instanceserver' })
