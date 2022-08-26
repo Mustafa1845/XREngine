@@ -29,21 +29,21 @@ fi
 
 docker tag $LABEL $ECR_URL/$REPO_NAME-builder:$TAG
 docker tag $LABEL $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:$TAG
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:$TAG
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:$TAG
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:$TAG
-docker tag $LABEL $ECR_URL/$REPO_NAME-builder:latest_$STAGE
+docker tag $LABEL $ECR_URL/$REPO_NAME-api:$TAG
+docker tag $LABEL $ECR_URL/$REPO_NAME-api:latest_$STAGE
+docker tag $LABEL $ECR_URL/$REPO_NAME-analytics:$TAG
+docker tag $LABEL $ECR_URL/$REPO_NAME-analytics:latest_$STAGE
+docker tag $LABEL $ECR_URL/$REPO_NAME-client:$TAG
+docker tag $LABEL $ECR_URL/$REPO_NAME-client:latest_$STAGE
+docker tag $LABEL $ECR_URL/$REPO_NAME-instanceserver:$TAG
+docker tag $LABEL $ECR_URL/$REPO_NAME-instanceserver:latest_$STAGE
 docker push $ECR_URL/$REPO_NAME-builder:$TAG
 docker push $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker push $ECR_URL/$REPO_NAME-builder:$TAG
-docker push $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker push $ECR_URL/$REPO_NAME-builder:$TAG
-docker push $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker push $ECR_URL/$REPO_NAME-builder:$TAG
-docker push $ECR_URL/$REPO_NAME-builder:latest_$STAGE
-docker push $ECR_URL/$REPO_NAME-builder:$TAG
-docker push $ECR_URL/$REPO_NAME-builder:latest_$STAGE
+docker push $ECR_URL/$REPO_NAME-api:$TAG
+docker push $ECR_URL/$REPO_NAME-api:latest_$STAGE
+docker push $ECR_URL/$REPO_NAME-analytics:$TAG
+docker push $ECR_URL/$REPO_NAME-analytics:latest_$STAGE
+docker push $ECR_URL/$REPO_NAME-client:$TAG
+docker push $ECR_URL/$REPO_NAME-client:latest_$STAGE
+docker push $ECR_URL/$REPO_NAME-instanceserver:$TAG
+docker push $ECR_URL/$REPO_NAME-instanceserver:latest_$STAGE
