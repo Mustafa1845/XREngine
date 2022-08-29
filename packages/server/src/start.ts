@@ -13,7 +13,6 @@ import multiLogger from '@xrengine/server-core/src/logger'
 import channels from './channels'
 
 
-
 const logger = multiLogger.child({ component: 'server-core:user' })
 
 process.on('unhandledRejection', (error, promise) => {
