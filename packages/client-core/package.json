@@ -39,7 +39,7 @@
     "@feathersjs/socketio-client": "5.0.0-pre.10",
     "@google/model-viewer": "1.11.1",
     "@iconify/react": "3.2.0",
-    "@mui/icons-material": "5.6.1",
+    "@mui/icons-material": "5.8.4",
     "@mui/lab": "^5.0.0-alpha.73",
     "@mui/material": "5.6.1",
     "@mui/styled-engine-sc": "5.6.1",
